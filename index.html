@@ -1,0 +1,38 @@
+<head>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+
+<body>
+  <h1>SFX Editor</h1>
+
+  <input id="files" type="file" accept="audio/*" multiple />
+
+  <div class="row">
+    <button id="play">Play</button>
+    <button id="stop">Stop</button>
+    <button id="render">Render WAV</button>
+    <button id="clear">Clear project</button>
+
+    <label class="master">
+      Master
+      <input id="masterVol" type="range" min="0" max="1" step="0.01" value="1" />
+    </label>
+
+    <label class="zoom">
+      Zoom
+      <input id="zoom" type="range" min="50" max="300" step="10" value="120" />
+      <span id="zoomVal">120</span> px/s
+    </label>
+  </div>
+
+  <div id="layers"></div>
+
+  <div id="loading" class="loading hidden" role="status" aria-live="polite">
+    <div class="loadingPanel">
+      <div class="spinner"></div>
+      <div id="loadingText">Loading</div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>

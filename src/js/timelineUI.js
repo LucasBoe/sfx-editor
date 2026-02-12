@@ -2,7 +2,7 @@ import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume
 import { setClipPosition, trackWidthPx } from "./audio.js";
 import { setCanvasSize } from "./canvasFit.js";
 
-export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) {
+export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, requestRender }) {
   const template = layersEl.querySelector("#layerTemplate");
   const tracksEl = layersEl.querySelector("#tracks");
 
@@ -22,6 +22,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) 
     const volEl = frag.querySelector(".vol");
     const volDbEl = frag.querySelector(".volDb");
     const clipEl = frag.querySelector(".clip");
+    const delEl = frag.querySelector(".del");
 
     // NEW: tiled waveform container
     const waveEl = frag.querySelector(".wave");
@@ -118,6 +119,13 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) 
       clipEl.addEventListener("pointermove", onMove);
       clipEl.addEventListener("pointerup", onUp);
       clipEl.addEventListener("pointercancel", onUp);
+    });
+
+    delEl.addEventListener("click", () => {
+      const idx = state.layers.indexOf(l);
+      if (idx >= 0) state.layers.splice(idx, 1);
+      scheduleSave();
+      requestRender();
     });
 
     tracksEl.appendChild(frag);

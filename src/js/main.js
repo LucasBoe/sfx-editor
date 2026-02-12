@@ -8,7 +8,7 @@ import { setCanvasSize } from "./canvasFit.js";
 import { zoomFromSlider, sliderFromZoom } from "./zoomConfig.js";
 import {
   ensureCtx, decodeAudio, createGainToMaster, startPlayback, stopPlayback, renderMixdownWav, 
-  setPlayheadTime, trackWidthPx, computeTimelineOriginPx } from "./audio.js";
+  setPlayheadTime, trackWidthPx, updatePlayheadPosition } from "./audio.js";
 import { renderLayersUI } from "./timelineUI.js";
 
 const state = {
@@ -22,6 +22,7 @@ const state = {
   playheadEl: dom.playheadEl,
   rulerCanvasEl: dom.rulerCanvasEl,
   timelineOriginPx: 0,
+  timelineShellEl: document.getElementById("timelineShell"),
   playheadTime: 0,
   playheadTimeAtStart: 0,
   leftPanelWidth: 0,
@@ -69,35 +70,27 @@ function render() {
   const w = trackWidthPx(state);
   dom.layersEl.style.setProperty("--timeline-width", `${w}px`);
 
-  renderLayersUI({
-    state,
-    layersEl: dom.layersEl,
-    drawWaveform: drawWaveformSegment,
-    scheduleSave,
-  });
+  renderLayersUI({ state, layersEl: dom.layersEl, drawWaveform: drawWaveformSegment, scheduleSave, requestRender: render });
 
-  state.timelineOriginPx = computeTimelineOriginPx(dom.layersEl);
   setPlayheadTime(state, state.playheadTime);
 
   renderRuler();
 
   requestAnimationFrame(() => {
-    state.timelineOriginPx = computeTimelineOriginPx(dom.layersEl);
     setPlayheadTime(state, state.playheadTime);
     renderRuler();
   });
 }
-
-
-
 
 function renderRuler() {
   const rulerH = 28;
   const cssW = Math.round(dom.rulerCanvasEl.parentElement.clientWidth);
   const startTime = dom.layersEl.scrollLeft / state.pxPerSec;
 
+  const xOffset = timelineXOffsetInRuler();
+
   setCanvasSize(dom.rulerCanvasEl, cssW, rulerH);
-  drawRulerViewport(dom.rulerCanvasEl, state.pxPerSec, startTime, cssW, rulerH);
+  drawRulerViewport(dom.rulerCanvasEl, state.pxPerSec, startTime, cssW, rulerH, xOffset);
 }
 
 dom.masterVolEl.addEventListener("input", () => {
@@ -120,19 +113,64 @@ dom.masterDbEl.addEventListener("change", () => {
   scheduleSave();
 });
 
-dom.zoomEl.addEventListener("input", applyZoomFromSlider);
+let zoomTimer = 0;
 
-function bumpZoom(dir) {
-  const step = 25; // feel free to tweak
+function applyZoomLight() {
+  const layersRect = dom.layersEl.getBoundingClientRect();
+  const phRect = dom.playheadEl.getBoundingClientRect();
+  const anchorX = phRect.left - layersRect.left;
+
+  state.pxPerSec = zoomFromSlider(Number(dom.zoomEl.value));
+  setZoomLabel(Math.round(state.pxPerSec));
+
+  const baseOrigin = timelineBaseOriginPx();
+  if (baseOrigin) {
+    const contentX = state.playheadTime * state.pxPerSec;
+    dom.layersEl.scrollLeft = Math.max(0, baseOrigin + contentX - anchorX);
+  }
+
+  renderRuler();
+  updatePlayheadPosition(state);
+}
+
+dom.zoomEl.addEventListener("input", () => {
+  applyZoomLight();
+  clearTimeout(zoomTimer);
+  zoomTimer = setTimeout(() => {
+    render();       // expensive waveform rebuild
+    scheduleSave();
+  }, 120);
+});
+
+dom.zoomEl.addEventListener("change", () => {
+  render();
+  scheduleSave();
+});
+
+function bumpZoom(dir, instant = false) {
+  const step = 25;
   const cur = Number(dom.zoomEl.value) || 0;
   const next = Math.max(0, Math.min(1000, cur + dir * step));
   if (next === cur) return;
+
   dom.zoomEl.value = String(next);
-  applyZoomFromSlider();
+
+  applyZoomLight();
+  clearTimeout(zoomTimer);
+
+  if (instant) {
+    render();
+    scheduleSave();
+  } else {
+    zoomTimer = setTimeout(() => {
+      render();
+      scheduleSave();
+    }, 10);
+  }
 }
 
-dom.zoomInEl.addEventListener("click", () => bumpZoom(+1));
-dom.zoomOutEl.addEventListener("click", () => bumpZoom(-1));
+dom.zoomInEl.addEventListener("click", () => bumpZoom(+1, true));
+dom.zoomOutEl.addEventListener("click", () => bumpZoom(-1, true));
 
 function holdZoom(dir) {
   bumpZoom(dir);
@@ -149,28 +187,14 @@ function holdZoom(dir) {
 dom.zoomInEl.addEventListener("pointerdown", () => holdZoom(+1));
 dom.zoomOutEl.addEventListener("pointerdown", () => holdZoom(-1));
 
-function applyZoomFromSlider() {
-  const layersRect = dom.layersEl.getBoundingClientRect();
-  const phRect = dom.playheadEl.getBoundingClientRect();
-  const anchorX = phRect.left - layersRect.left;
 
-  state.pxPerSec = zoomFromSlider(Number(dom.zoomEl.value));
-  setZoomLabel(Math.round(state.pxPerSec));
-
-  render();
-
-  const playheadLeft = Number.parseFloat(state.playheadEl.style.left) || 0;
-  dom.layersEl.scrollLeft = Math.max(0, playheadLeft - anchorX);
-
-  scheduleSave();
-}
-
-let rulerRaf = 0;
+let phRaf = 0;
 dom.layersEl.addEventListener("scroll", () => {
-  if (rulerRaf) return;
-  rulerRaf = requestAnimationFrame(() => {
-    rulerRaf = 0;
+  if (phRaf) return;
+  phRaf = requestAnimationFrame(() => {
+    phRaf = 0;
     renderRuler();
+    updatePlayheadPosition(state);
   });
 });
 
@@ -260,7 +284,11 @@ dom.layersEl.addEventListener(
 function rulerTimeFromEvent(ev) {
   const rect = dom.rulerCanvasEl.getBoundingClientRect();
   const x = ev.clientX - rect.left;
-  return (dom.layersEl.scrollLeft + x) / state.pxPerSec;
+
+  const xOffset = timelineXOffsetInRuler();
+  const t = (dom.layersEl.scrollLeft + x - xOffset) / state.pxPerSec;
+
+  return Math.max(0, t);
 }
 
 function seekToTime(t, restartIfPlaying) {
@@ -324,6 +352,29 @@ dom.rulerCanvasEl.addEventListener("pointerdown", (e) => {
   dom.rulerCanvasEl.addEventListener("pointerup", onUp);
   dom.rulerCanvasEl.addEventListener("pointercancel", onUp);
 });
+
+function timelineBaseOriginPx() {
+  const layersRect = dom.layersEl.getBoundingClientRect();
+  const track = dom.layersEl.querySelector(".track");
+  if (!track) return 0;
+  const trackRect = track.getBoundingClientRect();
+
+  // constant origin, independent of scroll
+  return (trackRect.left - layersRect.left) + dom.layersEl.scrollLeft;
+}
+
+function timelineXOffsetInRuler() {
+  const track = dom.layersEl.querySelector(".track");
+  if (!track) return 0;
+
+  const trackRect = track.getBoundingClientRect();
+  const rulerRect = dom.rulerCanvasEl.getBoundingClientRect();
+
+  // constant even while scrolling
+  const offset = (trackRect.left + dom.layersEl.scrollLeft) - rulerRect.left;
+  console.log(offset)
+  return offset;
+}
 
 async function restore() {
   setLoading(true, "Restoring project");

@@ -3,11 +3,19 @@
 $pad: 16px;
 $gap: 12px;
 
+$clip-distance: 3px;
+
 $layer-name-width: 240px;
 $layer-offset-width: 110px;
-$controls-width: 128px;
+$controls-width: 16vw;
 
 $timeline-header-h: 28px;
+
+$backdrop-color: #0d1c27;
+
+body {
+  background: #11222e;
+}
 
 .volDb,
 #masterDb {
@@ -30,6 +38,15 @@ $timeline-header-h: 28px;
   }
 }
 
+.container-fluid {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#timelineShell {
+  position: relative;
+}
+
 #layers {
   position: relative;
 
@@ -39,10 +56,13 @@ $timeline-header-h: 28px;
   display: grid;
   gap: 6px;
 
-  overflow-x: auto;
   overflow-y: visible;
+  overflow-x: auto;
 
   padding-bottom: 10px;
+
+  min-height: 25vh;
+  align-content: center;
 }
 
 #rulerBar {
@@ -50,22 +70,14 @@ $timeline-header-h: 28px;
   align-items: center;
   gap: 0;
   height: $timeline-header-h;
-  margin-bottom: 6px;
-}
-
-#rulerSpacer {
-  width: $controls-width;
-  flex: 0 0 $controls-width;
 }
 
 #rulerViewport {
+  width: 100%;
   flex: 1 1 auto;
   height: $timeline-header-h;
-
-  border-radius: 0.375rem;
-  border: solid #495057;
-  border-width: 1px;
-  background: #1b1f22;
+  border-bottom: solid #495057 1px;
+  //background: #1b1f22;
   overflow: hidden;
   cursor: ew-resize;
 }
@@ -81,6 +93,8 @@ $timeline-header-h: 28px;
   gap: 12px;
   display: flex;
   position: relative;
+  $border-color: rgba(255, 255, 255, 0.16);
+  border-bottom: .5px $border-color solid;
 }
 
 .layerControls {
@@ -88,7 +102,10 @@ $timeline-header-h: 28px;
   left: 0;
   z-index: 5;
   width: $controls-width;
-  padding: 0 0 0 10px;
+  padding: 0 12px;
+  background: rgba(0,0,0,.1);
+  height: calc(96px + 2 * $clip-distance); 
+  z-index: 0;
 
   .small {
     width: $layer-offset-width;
@@ -102,14 +119,14 @@ $timeline-header-h: 28px;
 
 .track {
   position: relative;
-  height: 96px;
+  height: calc(96px + 2 * $clip-distance);
   left: $controls-width;
 }
 
 .nameWrapper {
   position: fixed;
+  margin-left: 12px;
   margin-top: 12px;
-  z-index: 2;
   width: 0;
   font-size: 0.75em;
 
@@ -121,12 +138,12 @@ $timeline-header-h: 28px;
 
 .clip {
   position: absolute;
-  top: 8px;
-  height: 100%;
+  top: $clip-distance;
+  height: 96px;
   border-radius: 0.375rem;
-  border: solid #495057;
-  border-width: 1px;
-  background: #1b1f22;
+  outline: solid #ffe69c;
+  outline-width: 1.5px;
+  background: $backdrop-color;
 
   cursor: grab;
   user-select: none;
@@ -148,24 +165,30 @@ $timeline-header-h: 28px;
   flex: 0 0 auto;
 }
 
-/* Keep your playhead styling */
-.playhead {
+
+#globalPlayhead {
   position: absolute;
-  top: -3px;
-  bottom: -3px;
+  top: -6px;
+  bottom: 0;
   left: 0;
   width: 2px;
   background: #dc3545;
   pointer-events: none;
   z-index: 10;
-}
 
-/* Global playhead element (id in HTML: globalPlayhead) */
-#globalPlayhead,
-.globalPlayhead {
-  @extend .playhead;
-  top: 0;
-  bottom: 0;
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid #dc3545;
+  }
 }
 
 .loading {
@@ -174,9 +197,9 @@ $timeline-header-h: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 24, 0.5);
+  backdrop-filter: blur(3px);
   z-index: 9999;
-  backdrop-filter: blur(2px);
 
   &.hidden {
     display: none;
@@ -192,7 +215,7 @@ $timeline-header-h: 28px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  background: white;
+  background: #1b1f22;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
@@ -200,8 +223,8 @@ $timeline-header-h: 28px;
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  border: 3px solid rgba(0, 0, 0, 0.18);
-  border-top-color: rgba(0, 0, 0, 0.75);
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.75);
   animation: spin 0.8s linear infinite;
 }
 

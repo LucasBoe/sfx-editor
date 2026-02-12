@@ -48,15 +48,6 @@ export function getLeftPanelWidthPx(layersEl) {
   return a + b;
 }
 
-export function computeTimelineOriginPx(layersEl) {
-  if (!layersEl) return 0;
-  const layersRect = layersEl.getBoundingClientRect();
-  const track = layersEl.querySelector(".track");
-  if (!track) return 0;
-  const trackRect = track.getBoundingClientRect();
-  return (trackRect.left - layersRect.left) + layersEl.scrollLeft;
-}
-
 function controlsWidthPx(layersEl) {
   if (!layersEl) return 0;
   const v = getComputedStyle(layersEl).getPropertyValue("--controls-width").trim();
@@ -79,13 +70,31 @@ function timelineOriginPx(state) {
   return controlsWidthPx(state.layersEl);
 }
 
+function playheadOriginPx(state) {
+  const shell = state.timelineShellEl;
+  const layersEl = state.layersEl;
+  if (!shell || !layersEl) return 0;
+
+  const track = layersEl.querySelector(".track");
+  if (!track) return 0;
+
+  const shellRect = shell.getBoundingClientRect();
+  const trackRect = track.getBoundingClientRect();
+
+  // screen space origin of timeline, already accounts for scroll
+  return trackRect.left - shellRect.left;
+}
+
+export function updatePlayheadPosition(state) {
+  const origin = playheadOriginPx(state);
+  const x = origin + state.playheadTime * state.pxPerSec;
+  state.playheadEl.style.left = `${x}px`;
+}
+
 export function setPlayheadTime(state, t) {
   const dur = projectDuration(state.layers);
-  const clamped = Math.max(0, Math.min(t, dur));
-  state.playheadTime = clamped;
-
-  const origin = Number.isFinite(state.timelineOriginPx) ? state.timelineOriginPx : 0;
-  state.playheadEl.style.left = `${origin + clamped * state.pxPerSec}px`;
+  state.playheadTime = Math.max(0, Math.min(t, dur));
+  updatePlayheadPosition(state);
 }
 
 export function currentPlayTime(state) {

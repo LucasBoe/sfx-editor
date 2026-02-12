@@ -1,0 +1,21 @@
+const MAX_BACKING_PX = 8192;
+
+export function setCanvasSize(canvas, cssW, cssH) {
+  const dpr = window.devicePixelRatio || 1;
+
+  const bw = Math.min(Math.ceil(cssW * dpr), MAX_BACKING_PX);
+  const bh = Math.min(Math.ceil(cssH * dpr), MAX_BACKING_PX);
+
+  canvas.width = Math.max(1, bw);
+  canvas.height = Math.max(1, bh);
+
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+
+  return {
+    cssW,
+    cssH,
+    sx: canvas.width / cssW,
+    sy: canvas.height / cssH,
+  };
+}

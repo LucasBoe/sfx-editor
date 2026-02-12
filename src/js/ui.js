@@ -9,6 +9,8 @@ export const dom = {
   masterVolEl: document.getElementById("masterVol"),
   masterDbEl: document.getElementById("masterDb"),
 
+  zoomInEl: document.getElementById("zoomIn"),
+  zoomOutEl: document.getElementById("zoomOut"),
   zoomEl: document.getElementById("zoom"),
   zoomValEl: document.getElementById("zoomVal"),
 

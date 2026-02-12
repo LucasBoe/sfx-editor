@@ -120,7 +120,36 @@ dom.masterDbEl.addEventListener("change", () => {
   scheduleSave();
 });
 
-dom.zoomEl.addEventListener("input", () => {
+dom.zoomEl.addEventListener("input", applyZoomFromSlider);
+
+function bumpZoom(dir) {
+  const step = 25; // feel free to tweak
+  const cur = Number(dom.zoomEl.value) || 0;
+  const next = Math.max(0, Math.min(1000, cur + dir * step));
+  if (next === cur) return;
+  dom.zoomEl.value = String(next);
+  applyZoomFromSlider();
+}
+
+dom.zoomInEl.addEventListener("click", () => bumpZoom(+1));
+dom.zoomOutEl.addEventListener("click", () => bumpZoom(-1));
+
+function holdZoom(dir) {
+  bumpZoom(dir);
+  const id = setInterval(() => bumpZoom(dir), 60);
+  const stop = () => {
+    clearInterval(id);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+  };
+  window.addEventListener("pointerup", stop);
+  window.addEventListener("pointercancel", stop);
+}
+
+dom.zoomInEl.addEventListener("pointerdown", () => holdZoom(+1));
+dom.zoomOutEl.addEventListener("pointerdown", () => holdZoom(-1));
+
+function applyZoomFromSlider() {
   const layersRect = dom.layersEl.getBoundingClientRect();
   const phRect = dom.playheadEl.getBoundingClientRect();
   const anchorX = phRect.left - layersRect.left;
@@ -134,7 +163,7 @@ dom.zoomEl.addEventListener("input", () => {
   dom.layersEl.scrollLeft = Math.max(0, playheadLeft - anchorX);
 
   scheduleSave();
-});
+}
 
 let rulerRaf = 0;
 dom.layersEl.addEventListener("scroll", () => {
@@ -210,6 +239,23 @@ dom.clearEl.addEventListener("click", async () => {
   render();
   await clearProject();
 });
+
+// prevent "go to previous page when navigating through tracks horizontally and reaching scroll boundary"
+dom.layersEl.addEventListener(
+  "wheel",
+  (e) => {
+    const dx = e.deltaX;
+    const dy = e.deltaY;
+
+    const horizontalIntent = Math.abs(dx) > Math.abs(dy) || e.shiftKey;
+    if (!horizontalIntent) return;
+
+    const move = e.shiftKey ? dy : dx;
+    dom.layersEl.scrollLeft += move;
+    e.preventDefault();
+  },
+  { passive: false }
+);
 
 function rulerTimeFromEvent(ev) {
   const rect = dom.rulerCanvasEl.getBoundingClientRect();

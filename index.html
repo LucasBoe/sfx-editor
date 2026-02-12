@@ -10,7 +10,23 @@
       <h1 class="mb-3">SFX Editor</h1>
 
       <div class="row d-flex gap-2 align-items-center flex-wrap mb-3">
-        <input id="files" class="col form-control" type="file" accept="audio/*" multiple />
+
+          <input id="files" type="file" accept="audio/*" multiple class="visually-hidden" />
+
+          <label for="files" class="col-md-auto btn btn-outline-secondary">
+            <span class="icon-upload"></span>
+          </label>
+
+        <button id="render" class="col-md-auto btn btn-outline-primary">
+            <span class="icon-download"></span>
+        </button>
+        
+        <label class="col-md-auto master d-flex align-items-center gap-2 ms-auto mb-0">
+          Master
+          <input id="masterVol" type="range" min="-80" max="12" step="0.1" value="0" />
+          <input id="masterDb" type="text" value="0.0" />
+          <span class="dbSuffix">dB</span>
+        </label>
 
         <button id="play" class="col-md-auto btn btn-primary">
             <span class="icon-play3"></span>
@@ -18,25 +34,26 @@
         <button id="stop" class="col-md-auto btn btn-outline-secondary">
             <span class="icon-stop2"></span>
         </button>
-        <button id="render" class="col-md-auto btn btn-outline-primary">
-            <span class="icon-download"></span>
-        </button>
+        
+        <label class="col zoom d-flex align-items-center gap-2 mb-0">
+          <span class="small text-muted">Zoom Level</span>
+
+          <button id="zoomOut" type="button" class="btn btn-outline-secondary btn-sm">
+            <span class="icon-minus"></span>
+          </button>
+
+          <input id="zoom" type="range" min="0" max="1000" step="1" value="0" />
+
+          <button id="zoomIn" type="button" class="btn btn-outline-secondary btn-sm">
+            <span class="icon-plus"></span>
+          </button>
+
+          <span id="zoomVal">800</span> px/s
+        </label>
+
         <button id="clear" class="col-md-auto btn btn-outline-danger">
             <span class="icon-history"></span>
         </button>
-
-        <label class="col master d-flex align-items-center gap-2 ms-auto mb-0">
-          Master
-          <input id="masterVol" type="range" min="-80" max="12" step="0.1" value="0" />
-          <input id="masterDb" type="text" value="0.0" />
-          <span class="dbSuffix">dB</span>
-        </label>
-
-        <label class="zoom d-flex align-items-center gap-2 mb-0">
-          <span class="small text-muted">Zoom Level</span>
-          <input id="zoom" type="range" min="0" max="1000" step="1" value="0" />
-          <span id="zoomVal">800</span> px/s
-        </label>
       </div>
     </div>
 

@@ -50,6 +50,7 @@
   border-width: 1px;
   background: #1b1f22;
   overflow: hidden;
+  cursor: ew-resize;
 }
 
 #rulerCanvas {
@@ -66,7 +67,7 @@
 }
 
 .layerControls {
-  position: absolute;
+  position: fixed;
   left: 0;
   z-index: 5;
   width: 128px;
@@ -87,7 +88,7 @@
 }
 
 .nameWrapper {
-  position: absolute;
+  position: fixed;
   margin-top: 12px;
   z-index: 2;
   width: 0;

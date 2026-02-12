@@ -111,14 +111,19 @@
      -moz-user-select: none;
           user-select: none;
   touch-action: none;
+  overflow: hidden;
 }
 .clip.dragging {
   cursor: grabbing;
 }
-.clip canvas {
-  width: 100%;
+
+.wave {
   height: 100%;
-  display: block;
+  display: flex;
+}
+
+.wave canvas {
+  flex: 0 0 auto;
 }
 
 /* Keep your playhead styling */

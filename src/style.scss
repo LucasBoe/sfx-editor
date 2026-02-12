@@ -131,15 +131,20 @@ $timeline-header-h: 28px;
   user-select: none;
   touch-action: none;
 
+  overflow: hidden;
+
   &.dragging {
     cursor: grabbing;
   }
+}
 
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+.wave {
+  height: 100%;
+  display: flex;
+}
+
+.wave canvas {
+  flex: 0 0 auto;
 }
 
 /* Keep your playhead styling */

@@ -34,9 +34,8 @@
 
         <label class="zoom d-flex align-items-center gap-2 mb-0">
           <span class="small text-muted">Zoom Level</span>
-          <input id="zoom" class="form-range" type="range" min="100" max="5000" step="25" value="800" />
-          <span id="zoomVal" class="small text-muted">800</span>
-          <span class="small text-muted">px/s</span>
+          <input id="zoom" type="range" min="0" max="1000" step="1" value="0" />
+          <span id="zoomVal">800</span> px/s
         </label>
       </div>
     </div>
@@ -78,8 +77,8 @@
             </div>
 
             <div class="track">
-              <div class="clip">
-                <canvas height="48"></canvas>
+                <div class="clip">
+                  <div class="wave"></div>
               </div>
             </div>
           </div>

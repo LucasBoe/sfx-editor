@@ -2,13 +2,6 @@ import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume
 import { setClipPosition, trackWidthPx } from "./audio.js";
 import { setCanvasSize } from "./canvasFit.js";
 
-function clearRenderedLayers(layersEl) {
-  const keepId = "layerTemplate";
-  for (const child of Array.from(layersEl.children)) {
-    if (child.id !== keepId) child.remove();
-  }
-}
-
 export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) {
   const template = layersEl.querySelector("#layerTemplate");
   const tracksEl = layersEl.querySelector("#tracks");
@@ -29,7 +22,9 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) 
     const volEl = frag.querySelector(".vol");
     const volDbEl = frag.querySelector(".volDb");
     const clipEl = frag.querySelector(".clip");
-    const canvasEl = frag.querySelector("canvas");
+
+    // NEW: tiled waveform container
+    const waveEl = frag.querySelector(".wave");
 
     nameEl.textContent = `${l.name} (${l.buffer.duration.toFixed(2)}s)`;
     offsetEl.value = String(l.offset);
@@ -42,10 +37,34 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave }) 
     clipEl.style.width = `${clipW}px`;
     setClipPosition(state, clipEl, l.offset);
 
-    const clipH = 96; // matches your .track height
-    setCanvasSize(canvasEl, clipW, clipH);
-    drawWaveform(canvasEl, l.buffer);
+    // NEW: draw waveform in tiles to avoid huge canvas blur
+    if (waveEl) {
+      waveEl.innerHTML = "";
 
+      const clipH = 96; // matches .track height
+      const tileMaxCssPx = 1600;
+
+      for (let x0 = 0; x0 < clipW; x0 += tileMaxCssPx) {
+        const tileW = Math.min(tileMaxCssPx, clipW - x0);
+
+        const c = document.createElement("canvas");
+        setCanvasSize(c, tileW, clipH);
+
+        const t0 = x0 / state.pxPerSec;
+        const t1 = (x0 + tileW) / state.pxPerSec;
+
+        drawWaveform(c, l.buffer, t0, t1);
+        waveEl.appendChild(c);
+      }
+    } else {
+      // Fallback if template still has a single canvas
+      const canvasEl = frag.querySelector("canvas");
+      if (canvasEl) {
+        const clipH = 96;
+        setCanvasSize(canvasEl, clipW, clipH);
+        drawWaveform(canvasEl, l.buffer);
+      }
+    }
 
     volEl.addEventListener("input", () => {
       const db = clampDb(Number(volEl.value));

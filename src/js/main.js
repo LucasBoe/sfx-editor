@@ -2,12 +2,13 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { dom, setLoading, setZoomLabel } from "./ui.js";
 import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
 import { loadProject, saveProject, clearProject } from "./persist.js";
-import { drawWaveformFromBuffer } from "./waveform.js";
+import { drawWaveformSegment } from "./waveform.js";
 import { drawRulerViewport } from "./ruler.js";
 import { setCanvasSize } from "./canvasFit.js";
+import { zoomFromSlider, sliderFromZoom } from "./zoomConfig.js";
 import {
   ensureCtx, decodeAudio, createGainToMaster, startPlayback, stopPlayback, renderMixdownWav, 
-  getLeftPanelWidthPx, setPlayheadTime, trackWidthPx, computeTimelineOriginPx, projectDuration } from "./audio.js";
+  setPlayheadTime, trackWidthPx, computeTimelineOriginPx } from "./audio.js";
 import { renderLayersUI } from "./timelineUI.js";
 
 const state = {
@@ -31,10 +32,12 @@ const state = {
     updatePlayButton();
 },
 
-  pxPerSec: Number(dom.zoomEl.value),
+  pxPerSec: zoomFromSlider(Number(dom.zoomEl.value)),
+  
 };
 
-setZoomLabel(state.pxPerSec);
+dom.zoomEl.value = String(sliderFromZoom(state.pxPerSec));
+setZoomLabel(Math.round(state.pxPerSec));
 
 let saveTimer = null;
 function scheduleSave() {
@@ -46,6 +49,8 @@ async function saveNow() {
   try {
     const project = {
       masterVol: dbToGain(Number(dom.masterVolEl.value)),
+      playheadTime: state.playheadTime,
+      playSessionStartTime: state.playSessionStartTime,
       pxPerSec: state.pxPerSec,
       layers: state.layers.map((l) => ({
         name: l.name,
@@ -67,7 +72,7 @@ function render() {
   renderLayersUI({
     state,
     layersEl: dom.layersEl,
-    drawWaveform: drawWaveformFromBuffer,
+    drawWaveform: drawWaveformSegment,
     scheduleSave,
   });
 
@@ -118,19 +123,14 @@ dom.masterDbEl.addEventListener("change", () => {
 dom.zoomEl.addEventListener("input", () => {
   const layersRect = dom.layersEl.getBoundingClientRect();
   const phRect = dom.playheadEl.getBoundingClientRect();
-
-  // playhead x inside the visible layers viewport
   const anchorX = phRect.left - layersRect.left;
 
-  state.pxPerSec = Number(dom.zoomEl.value);
-  setZoomLabel(state.pxPerSec);
+  state.pxPerSec = zoomFromSlider(Number(dom.zoomEl.value));
+  setZoomLabel(Math.round(state.pxPerSec));
 
   render();
 
-  // playhead x in content coordinates after zoom
   const playheadLeft = Number.parseFloat(state.playheadEl.style.left) || 0;
-
-  // scroll so playhead stays at same anchorX
   dom.layersEl.scrollLeft = Math.max(0, playheadLeft - anchorX);
 
   scheduleSave();
@@ -290,8 +290,11 @@ async function restore() {
     dom.masterDbEl.value = formatDb(masterDb);
 
     state.pxPerSec = Number(project.pxPerSec ?? state.pxPerSec);
-    dom.zoomEl.value = String(state.pxPerSec);
-    setZoomLabel(state.pxPerSec);
+    dom.zoomEl.value = String(sliderFromZoom(state.pxPerSec));
+    setZoomLabel(Math.round(state.pxPerSec));
+
+    state.playheadTime = Number(project.playheadTime ?? 0);
+    state.playSessionStartTime = Number(project.playSessionStartTime ?? state.playheadTime);
 
     ensureCtx(state, dbToGain(Number(dom.masterVolEl.value)));
     state.layers = [];

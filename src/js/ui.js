@@ -1,4 +1,5 @@
 export const dom = {
+  timelineShellEl: document.getElementById("timelineShell"),
   filesEl: document.getElementById("files"),
   layersEl: document.getElementById("layers"),
   playEl: document.getElementById("play"),

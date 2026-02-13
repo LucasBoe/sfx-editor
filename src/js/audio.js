@@ -1,10 +1,11 @@
 import { audioBufferToWav, downloadBlob } from "./wav.js";
+import { projectDuration } from "./models/timeline.js";
 
-export function ensureCtx(state, masterVol) {
+export function ensureCtx(state, masterGainValue) {
   if (!state.ctx) {
     state.ctx = new AudioContext();
     state.masterGain = state.ctx.createGain();
-    state.masterGain.gain.value = masterVol;
+    state.masterGain.gain.value = masterGainValue;
     state.masterGain.connect(state.ctx.destination);
   }
   return state.ctx;
@@ -27,88 +28,33 @@ export function createGainToMaster(state, value) {
   return g;
 }
 
-export function projectDuration(layers) {
-  let max = 0;
-  for (const l of layers) max = Math.max(max, l.offset + l.buffer.duration);
-  return max;
+function clampTime(state, t) {
+  const dur = projectDuration(state.layers || []);
+  return Math.max(0, Math.min(Number(t) || 0, dur));
 }
 
-export function trackWidthPx(state) {
-  return Math.max(300, Math.ceil(projectDuration(state.layers) * state.pxPerSec) + 120);
-}
-
-export function setClipPosition(state, clipEl, offset) {
-  clipEl.style.left = `${offset * state.pxPerSec}px`;
-}
-
-export function getLeftPanelWidthPx(layersEl) {
-  const cs = getComputedStyle(layersEl);
-  const a = parseFloat(cs.getPropertyValue("--controls-col-width")) || 0;
-  const b = parseFloat(cs.getPropertyValue("--name-col-width")) || 0;
-  return a + b;
-}
-
-function controlsWidthPx(layersEl) {
-  if (!layersEl) return 0;
-  const v = getComputedStyle(layersEl).getPropertyValue("--controls-width").trim();
-  const n = Number.parseFloat(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function timelineOriginPx(state) {
-  if (!state.layersEl) return 0;
-
-  if (state.rulerCanvasEl) {
-    const layersRect = state.layersEl.getBoundingClientRect();
-    const rulerRect = state.rulerCanvasEl.getBoundingClientRect();
-
-    // stable even when scrolled
-    return (rulerRect.left - layersRect.left) + state.layersEl.scrollLeft;
+export function setPlayheadTimeValue(state, t) {
+  const clamped = clampTime(state, t);
+  state.playheadTime = clamped;
+  if (typeof state.onPlayheadTimeChanged === "function") {
+    state.onPlayheadTimeChanged(clamped);
   }
-
-  // fallback
-  return controlsWidthPx(state.layersEl);
-}
-
-function playheadOriginPx(state) {
-  const shell = state.timelineShellEl;
-  const layersEl = state.layersEl;
-  if (!shell || !layersEl) return 0;
-
-  const track = layersEl.querySelector(".track");
-  if (!track) return 0;
-
-  const shellRect = shell.getBoundingClientRect();
-  const trackRect = track.getBoundingClientRect();
-
-  // screen space origin of timeline, already accounts for scroll
-  return trackRect.left - shellRect.left;
-}
-
-export function updatePlayheadPosition(state) {
-  const origin = playheadOriginPx(state);
-  const x = origin + state.playheadTime * state.pxPerSec;
-  state.playheadEl.style.left = `${x}px`;
-}
-
-export function setPlayheadTime(state, t) {
-  const dur = projectDuration(state.layers);
-  state.playheadTime = Math.max(0, Math.min(t, dur));
-  updatePlayheadPosition(state);
 }
 
 export function currentPlayTime(state) {
-  if (!state.ctx || state.playStartAt === null) return state.playheadTime;
-  return state.playheadTimeAtStart + (state.ctx.currentTime - state.playStartAt);
+  if (!state.ctx || state.playStartAt === null) return state.playheadTime || 0;
+  return (state.playheadTimeAtStart || 0) + (state.ctx.currentTime - state.playStartAt);
 }
 
 export function stopPlayback(state) {
   if (state.playStartAt !== null) {
-    setPlayheadTime(state, currentPlayTime(state));
+    setPlayheadTimeValue(state, currentPlayTime(state));
   }
 
-  for (const src of state.playing) {
-    try { src.stop(); } catch {}
+  for (const src of state.playing || []) {
+    try {
+      src.stop();
+    } catch {}
   }
   state.playing = [];
 
@@ -116,16 +62,16 @@ export function stopPlayback(state) {
   state.rafId = null;
 
   state.playStartAt = null;
-  state.playheadTimeAtStart = state.playheadTime;
+  state.playheadTimeAtStart = state.playheadTime || 0;
 }
 
 export async function startPlayback(state) {
-  if (!state.layers.length) return;
+  if (!state.layers?.length) return;
 
   await state.ctx.resume();
   stopPlayback(state);
 
-  const cursor = state.playheadTime;
+  const cursor = state.playheadTime || 0;
   const t0 = state.ctx.currentTime + 0.05;
 
   state.playStartAt = t0;
@@ -153,12 +99,11 @@ export async function startPlayback(state) {
 
   const tick = () => {
     const t = currentPlayTime(state);
-    setPlayheadTime(state, t);
+    setPlayheadTimeValue(state, t);
 
     if (t >= dur + 0.02) {
       stopPlayback(state);
-      if (typeof state.onPlaybackEnded === "function")
-        state.onPlaybackEnded();
+      if (typeof state.onPlaybackEnded === "function") state.onPlaybackEnded();
       return;
     }
 
@@ -168,8 +113,8 @@ export async function startPlayback(state) {
   state.rafId = requestAnimationFrame(tick);
 }
 
-export async function renderMixdownWav(state, masterVolValue) {
-  if (!state.layers.length) return;
+export async function renderMixdownWav(state, masterGainValue) {
+  if (!state.layers?.length) return;
 
   const sr = state.ctx.sampleRate;
   const dur = projectDuration(state.layers);
@@ -179,7 +124,7 @@ export async function renderMixdownWav(state, masterVolValue) {
   const offline = new OfflineAudioContext(2, length, sr);
 
   const master = offline.createGain();
-  master.gain.value = masterVolValue;
+  master.gain.value = masterGainValue;
   master.connect(offline.destination);
 
   for (const l of state.layers) {

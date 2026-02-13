@@ -3,6 +3,12 @@ body {
   background: #11222e;
 }
 
+h1 img {
+  height: 1em;
+  filter: brightness(85%);
+  margin: 0 10px 8px;
+}
+
 .volDb,
 #masterDb {
   width: 3em;
@@ -22,120 +28,108 @@ body {
   pointer-events: none;
 }
 
+.zoom .btn {
+  --bs-btn-color: #6edff6;
+  --bs-btn-border-color: #6edff6;
+  --bs-btn-hover-color: {$backdrop-color};
+}
+.zoom .btn:hover {
+  color: #0d1c27;
+  background-color: #6edff6;
+  border-color: #6edff6;
+}
+
+#play {
+  --bs-btn-bg: #ffd042;
+  --bs-btn-border-color: #ffd042;
+  --bs-btn-hover-bg: #ffd042;
+  --bs-btn-hover-border-color: #ffd042;
+  --bs-btn-active-bg: #ffd042;
+  --bs-btn-active-border-color: #ffd042;
+  --bs-btn-color: #0d1c27;
+  --bs-btn-hover-color: #0d1c27;
+  --bs-btn-active-color: #0d1c27;
+}
+
+#stop {
+  --bs-btn-color: #ffd042;
+  --bs-btn-border-color: #ffd042;
+  --bs-btn-hover-bg: #ffd042;
+  --bs-btn-hover-border-color: #ffd042;
+  --bs-btn-hover-color: #0d1c27;
+  --bs-btn-active-bg: #ffd042;
+  --bs-btn-active-border-color: #ffd042;
+  --bs-btn-active-color: #0d1c27;
+}
+#stop.is-playing {
+  --bs-btn-bg: #ffd042;
+  --bs-btn-border-color: #ffd042;
+  --bs-btn-color: #0d1c27;
+  --bs-btn-hover-bg: #ffd042;
+  --bs-btn-hover-border-color: #ffd042;
+  --bs-btn-hover-color: #0d1c27;
+  --bs-btn-active-bg: #ffd042;
+  --bs-btn-active-border-color: #ffd042;
+  --bs-btn-active-color: #0d1c27;
+}
+
 .container-fluid {
   padding-left: 0;
   padding-right: 0;
 }
 
-#timelineShell {
-  position: relative;
-}
-
-#layers {
-  position: relative;
-  --controls-width: 16vw;
-  --timeline-width: 1000px;
-  display: grid;
-  gap: 6px;
-  overflow-y: visible;
-  overflow-x: auto;
-  padding-bottom: 10px;
-  min-height: 25vh;
-  align-content: center;
-}
-
-#rulerBar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  height: 28px;
-}
-
-#rulerViewport {
+/* Base reset (key bits: appearance none + transparent bg) */
+.range-custom {
+  --range-track-h: 0.5rem;
+  --range-thumb-width: 1rem;
+  --range-thumb-height: 2rem;
+  --range-track-bg: var(--bs-secondary-bg, #e9ecef);
+  --range-thumb-bg: var(--bs-primary, #0d6efd);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+       appearance: none;
   width: 100%;
-  flex: 1 1 auto;
-  height: 28px;
-  border-bottom: solid #495057 1px;
-  overflow: hidden;
-  cursor: ew-resize;
+  background: transparent;
+  cursor: pointer;
+}
+.range-custom#zoom {
+  --range-thumb-bg: #6edff6 ;
 }
 
-#rulerCanvas {
-  width: 100%;
-  height: 100%;
-  display: block;
+.range-custom:focus {
+  outline: none;
 }
 
-.layer {
-  align-items: start;
-  gap: 12px;
-  display: flex;
-  position: relative;
-  border-bottom: 0.5px rgba(255, 255, 255, 0.16) solid;
+/* Track */
+.range-custom::-webkit-slider-runnable-track {
+  height: var(--range-track-h);
+  background: var(--range-track-bg);
+  border-radius: 999px;
 }
 
-.layerControls {
-  position: fixed;
-  left: 0;
-  z-index: 5;
-  width: 16vw;
-  padding: 0 12px;
-  background: rgba(0, 0, 0, 0.1);
-  height: 102px;
-  z-index: 0;
-}
-.layerControls .small {
-  width: 110px;
-  visibility: hidden;
-}
-.layerControls input[type=range] {
-  width: 100%;
+.range-custom::-moz-range-track {
+  height: var(--range-track-h);
+  background: var(--range-track-bg);
+  border-radius: 999px;
 }
 
-.track {
-  position: relative;
-  height: 102px;
-  left: 16vw;
+/* Thumb */
+.range-custom::-webkit-slider-thumb,
+.range-custom::-moz-range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: var(--range-thumb-height);
+  width: var(--range-thumb-width);
+  border-radius: 1rm;
+  border: 0;
+  background: var(--range-thumb-bg);
+  margin-top: calc((var(--range-track-h) - var(--range-thumb-height)) / 2);
 }
 
-.nameWrapper {
-  position: fixed;
-  margin-left: 12px;
-  margin-top: 12px;
-  width: 0;
-  font-size: 0.75em;
-}
-.nameWrapper .name {
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.clip {
-  position: absolute;
-  top: 3px;
-  height: 96px;
-  border-radius: 0.375rem;
-  outline: solid #ffe69c;
-  outline-width: 1.5px;
-  background: #0d1c27;
-  cursor: grab;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
-  touch-action: none;
-  overflow: hidden;
-}
-.clip.dragging {
-  cursor: grabbing;
-}
-
-.wave {
-  height: 100%;
-  display: flex;
-}
-
-.wave canvas {
-  flex: 0 0 auto;
+/* Focus ring on the thumb */
+.range-custom:focus::-webkit-slider-thumb,
+.range-custom:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
 }
 
 #globalPlayhead {
@@ -159,6 +153,115 @@ body {
   border-left: 7px solid transparent;
   border-right: 7px solid transparent;
   border-top: 10px solid #dc3545;
+}
+
+#timelineShell {
+  position: relative;
+}
+
+#rulerBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 3vh;
+}
+
+#layers {
+  position: relative;
+  --controls-width: max(16vw, 20vh);
+  --timeline-width: 1000px;
+  display: grid;
+  gap: 6px;
+  overflow-y: visible;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  min-height: 25vh;
+  align-content: center;
+}
+
+#rulerViewport {
+  width: 100%;
+  flex: 1 1 auto;
+  height: 3vh;
+  border-bottom: solid #495057 1px;
+  overflow: hidden;
+  cursor: ew-resize;
+}
+
+#rulerCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.layer {
+  align-items: start;
+  gap: 12px;
+  display: flex;
+  position: relative;
+  border-bottom: 0.5px rgba(255, 255, 255, 0.16) solid;
+}
+
+.layerControls {
+  position: fixed;
+  left: 0;
+  z-index: 5;
+  width: max(16vw, 20vh);
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.1);
+  height: 102px;
+}
+.layerControls .small {
+  visibility: hidden;
+}
+.layerControls input[type=range] {
+  width: 100%;
+}
+
+.track {
+  position: relative;
+  height: 102px;
+  left: max(16vw, 20vh);
+}
+
+.nameWrapper {
+  position: fixed;
+  margin-left: 12px;
+  margin-top: 12px;
+  width: 0;
+  font-size: 0.75em;
+}
+.nameWrapper .name {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip {
+  position: absolute;
+  top: 3px;
+  height: 96px;
+  border-radius: 0.375rem;
+  outline: solid #fcd972;
+  outline-width: 1.5px;
+  background: #0d1c27;
+  cursor: grab;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  touch-action: none;
+  overflow: hidden;
+}
+.clip.dragging {
+  cursor: grabbing;
+}
+
+.wave {
+  height: 100%;
+  display: flex;
+}
+
+.wave canvas {
+  flex: 0 0 auto;
 }
 
 .loading {

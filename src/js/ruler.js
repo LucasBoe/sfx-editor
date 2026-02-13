@@ -10,7 +10,7 @@ function fmt(t) {
   return t.toFixed(1);
 }
 
-export function drawRulerViewport(canvas, pxPerSec, startTime, cssW, cssH, xOffsetPx = 0) {
+export function drawRulerViewport(canvas, pxPerSec, startTime, cssW, cssH, markerX = 0) {
   const g = canvas.getContext("2d");
 
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -29,16 +29,16 @@ export function drawRulerViewport(canvas, pxPerSec, startTime, cssW, cssH, xOffs
   const major = niceStep(targetPx / pxPerSec);
   const minor = major / 5;
 
-  // time at x=0 and x=cssW
-  const tMin = startTime - xOffsetPx / pxPerSec;
-  const tMax = startTime + (cssW - xOffsetPx) / pxPerSec;
+  // time at x=0 and x=cssW, given that time 0 aligns with markerX
+  const tMin = startTime - markerX / pxPerSec;
+  const tMax = startTime + (cssW - markerX) / pxPerSec;
 
   const first = Math.floor(tMin / minor) * minor;
 
   for (let t = first; t <= tMax + 1e-6; t += minor) {
     if (t < 0) continue;
 
-    const x = Math.round(xOffsetPx + (t - startTime) * pxPerSec) + 0.5;
+    const x = Math.round(markerX + (t - startTime) * pxPerSec) + 0.5;
     if (x < 0 || x > cssW) continue;
 
     const isMajor = Math.abs((t / major) - Math.round(t / major)) < 1e-6;
@@ -51,11 +51,11 @@ export function drawRulerViewport(canvas, pxPerSec, startTime, cssW, cssH, xOffs
     if (isMajor) g.fillText(fmt(t), x + 3, 13);
   }
 
-  // optional: mark where the track timeline actually starts
+  // mark where the track viewport starts (controls end)
   g.strokeStyle = "rgba(255,255,255,0.12)";
-  const xo = Math.round(xOffsetPx) + 0.5;
+  const mx = Math.round(markerX) + 0.5;
   g.beginPath();
-  g.moveTo(xo, 0);
-  g.lineTo(xo, cssH);
+  g.moveTo(mx, 0);
+  g.lineTo(mx, cssH);
   g.stroke();
 }

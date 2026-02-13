@@ -4,17 +4,26 @@ $pad: 16px;
 $gap: 12px;
 
 $clip-distance: 3px;
-
-$layer-name-width: 240px;
-$layer-offset-width: 110px;
-$controls-width: 16vw;
-
-$timeline-header-h: 28px;
+$controls-width: max(16vw, 20vh );
+$timeline-header-h: 3vh;
 
 $backdrop-color: #0d1c27;
+$zoom-color: #6edff6;
+$play-stop-color: #ffd042; 
+$clip-border-color: #fcd972;
+
+// globals
 
 body {
   background: #11222e;
+}
+
+h1 {
+  img {
+    height: 1em;
+    filter: brightness(85%);
+    margin: 0 10px 8px;
+  }
 }
 
 .volDb,
@@ -38,14 +47,162 @@ body {
   }
 }
 
+.zoom {
+  .btn {
+    --bs-btn-color: #{$zoom-color};
+    --bs-btn-border-color: #{$zoom-color};
+    --bs-btn-hover-color: {$backdrop-color};
+
+    &:hover {
+      color: $backdrop-color;
+      background-color: #{$zoom-color};
+      border-color: #{$zoom-color};
+    }
+  }
+}
+
+// play / stop buttons
+
+#play {
+  --bs-btn-bg: #{$play-stop-color};
+  --bs-btn-border-color: #{$play-stop-color};
+  --bs-btn-hover-bg: #{$play-stop-color};
+  --bs-btn-hover-border-color: #{$play-stop-color};
+  --bs-btn-active-bg: #{$play-stop-color};
+  --bs-btn-active-border-color: #{$play-stop-color};
+  --bs-btn-color: #{$backdrop-color};
+  --bs-btn-hover-color: #{$backdrop-color};
+  --bs-btn-active-color: #{$backdrop-color};
+}
+
+#stop {
+  --bs-btn-color: #{$play-stop-color};
+  --bs-btn-border-color: #{$play-stop-color};
+
+  --bs-btn-hover-bg: #{$play-stop-color};
+  --bs-btn-hover-border-color: #{$play-stop-color};
+  --bs-btn-hover-color: #{$backdrop-color};
+
+  --bs-btn-active-bg: #{$play-stop-color};
+  --bs-btn-active-border-color: #{$play-stop-color};
+  --bs-btn-active-color: #{$backdrop-color};
+
+  &.is-playing {
+    --bs-btn-bg: #{$play-stop-color};
+    --bs-btn-border-color: #{$play-stop-color};
+    --bs-btn-color: #{$backdrop-color};
+
+    --bs-btn-hover-bg: #{$play-stop-color};
+    --bs-btn-hover-border-color: #{$play-stop-color};
+    --bs-btn-hover-color: #{$backdrop-color};
+
+    --bs-btn-active-bg: #{$play-stop-color};
+    --bs-btn-active-border-color: #{$play-stop-color};
+    --bs-btn-active-color: #{$backdrop-color};
+  }
+}
+
 .container-fluid {
   padding-left: 0;
   padding-right: 0;
 }
 
+// input sliders
+
+/* Base reset (key bits: appearance none + transparent bg) */
+.range-custom {
+  --range-track-h: 0.5rem;
+  --range-thumb-width: 1rem;
+  --range-thumb-height: 2rem;
+
+  --range-track-bg: var(--bs-secondary-bg, #e9ecef);
+  --range-thumb-bg: var(--bs-primary, #0d6efd);
+
+  &#zoom {
+    --range-thumb-bg: #6edff6
+  }
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range-custom:focus {
+  outline: none;
+}
+
+/* Track */
+.range-custom::-webkit-slider-runnable-track {
+  height: var(--range-track-h);
+  background: var(--range-track-bg);
+  border-radius: 999px;
+}
+.range-custom::-moz-range-track {
+  height: var(--range-track-h);
+  background: var(--range-track-bg);
+  border-radius: 999px;
+}
+
+/* Thumb */
+.range-custom::-webkit-slider-thumb,
+.range-custom::-moz-range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: var(--range-thumb-height);
+  width: var(--range-thumb-width);
+  border-radius: 1rm;
+  border: 0;
+  background: var(--range-thumb-bg);
+  margin-top: calc((var(--range-track-h) - var(--range-thumb-height)) / 2);
+}
+
+/* Focus ring on the thumb */
+.range-custom:focus::-webkit-slider-thumb,
+.range-custom:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+}
+
+// playhead and rulers
+
+#globalPlayhead {
+  position: absolute;
+  top: -6px;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: #dc3545;
+  pointer-events: none;
+  z-index: 10;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid #dc3545;
+  }
+}
+
 #timelineShell {
   position: relative;
 }
+
+#rulerBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: $timeline-header-h;
+}
+
+// layers
 
 #layers {
   position: relative;
@@ -63,13 +220,6 @@ body {
 
   min-height: 25vh;
   align-content: center;
-}
-
-#rulerBar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  height: $timeline-header-h;
 }
 
 #rulerViewport {
@@ -104,11 +254,9 @@ body {
   width: $controls-width;
   padding: 0 12px;
   background: rgba(0,0,0,.1);
-  height: calc(96px + 2 * $clip-distance); 
-  z-index: 0;
+  height: calc(96px + 2 * $clip-distance);
 
   .small {
-    width: $layer-offset-width;
     visibility: hidden;
   }
 
@@ -116,6 +264,8 @@ body {
     width: 100%;
   }
 }
+
+// tracks and clips
 
 .track {
   position: relative;
@@ -141,7 +291,7 @@ body {
   top: $clip-distance;
   height: 96px;
   border-radius: 0.375rem;
-  outline: solid #ffe69c;
+  outline: solid $clip-border-color;
   outline-width: 1.5px;
   background: $backdrop-color;
 
@@ -165,31 +315,7 @@ body {
   flex: 0 0 auto;
 }
 
-
-#globalPlayhead {
-  position: absolute;
-  top: -6px;
-  bottom: 0;
-  left: 0;
-  width: 2px;
-  background: #dc3545;
-  pointer-events: none;
-  z-index: 10;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-
-    width: 0;
-    height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-top: 10px solid #dc3545;
-  }
-}
+// loading overlay
 
 .loading {
   position: fixed;

@@ -3,54 +3,60 @@
   <head>
     <link rel="stylesheet" href="/src/icons.css" />
     <link rel="stylesheet" href="/src/style.css" />
+    <link rel="icon" href="/public/favicon.ico" />
   </head>
 
   <body>
     <div class="container">
-      <h1 class="mb-3">SFX Editor</h1>
+      <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.0</img></h1>
 
       <div class="row d-flex gap-2 align-items-center flex-wrap mb-3">
 
-          <input id="files" type="file" accept="audio/*" multiple class="visually-hidden" />
-
-          <label for="files" class="col-md-auto btn btn-outline-secondary">
-            <span class="icon-upload"></span>
-          </label>
+        <!-- FILE INPUT / EXPORT -->
+        <input id="files" type="file" accept="audio/*" multiple class="visually-hidden" />
+        <label for="files" class="col-md-auto btn btn-outline-secondary">
+          <span class="icon-upload"></span>
+        </label>
 
         <button id="render" class="col-md-auto btn btn-outline-primary">
             <span class="icon-download"></span>
         </button>
-        
-        <label class="col-md-auto master d-flex align-items-center gap-2 ms-auto mb-0">
-          Master
-          <input id="masterVol" type="range" min="-80" max="12" step="0.1" value="0" />
-          <input id="masterDb" type="text" value="0.0" />
-          <span class="dbSuffix">dB</span>
+
+        <!-- ZOOM -->
+        <label class="col-md-auto zoom d-flex align-items-center gap-2 mx-2">
+          <span class="col-md-auto">Zoom</span>
+
+          <button id="zoomOut" type="button" class="btn btn-outline-secondary btn-sm">
+            <span class="icon-minus"></span>
+          </button>
+
+          <input id="zoom" type="range" class="form-range range-custom" min="0" max="1000" step="1" value="0" />
+
+          <button id="zoomIn" type="button" class="btn btn-outline-secondary btn-sm">
+            <span class="icon-plus"></span>
+          </button>
+
+          <span id="zoomVal">800</span>
+          <span class="col-md-auto">px/s<span>
         </label>
 
+        <!-- PLAY / STOP -->
         <button id="play" class="col-md-auto btn btn-primary">
             <span class="icon-play3"></span>
         </button>
         <button id="stop" class="col-md-auto btn btn-outline-secondary">
             <span class="icon-stop2"></span>
         </button>
-        
-        <label class="col zoom d-flex align-items-center gap-2 mb-0">
-          <span class="small text-muted">Zoom Level</span>
 
-          <button id="zoomOut" type="button" class="btn btn-outline-secondary btn-sm">
-            <span class="icon-minus"></span>
-          </button>
-
-          <input id="zoom" type="range" min="0" max="1000" step="1" value="0" />
-
-          <button id="zoomIn" type="button" class="btn btn-outline-secondary btn-sm">
-            <span class="icon-plus"></span>
-          </button>
-
-          <span id="zoomVal">800</span> px/s
+        <!-- MASTER VOLUME -->
+        <label class="col-md-auto master d-flex align-items-center gap-2 ms-auto mx-2">
+          Master
+          <input id="masterVol" type="range" class="form-range range-custom" min="-80" max="12" step="0.1" value="0" />
+          <input id="masterDb" type="text" value="0.0" />
+          <span class="dbSuffix">dB</span>
         </label>
 
+        <!-- CLEAR PROJECT -->
         <button id="clear" class="col-md-auto btn btn-outline-danger">
             <span class="icon-bin"></span>
         </button>
@@ -79,7 +85,7 @@
                   value="0"
                 />
 
-                <input class="vol" type="range" min="-80" max="12" step="0.1" value="0" />
+                <input class="vol form-range range-custom" type="range" min="-80" max="12" step="0.1" value="0" />
                 <input class="volDb" type="text" value="0.0" />
                 <span class="dbSuffix">dB</span>
                 <button type="button" class="btn btn-outline-danger btn-sm del" title="Delete layer">

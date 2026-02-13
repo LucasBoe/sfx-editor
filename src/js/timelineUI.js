@@ -1,6 +1,6 @@
 import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
-import { setClipPosition, trackWidthPx } from "./audio.js";
 import { setCanvasSize } from "./canvasFit.js";
+import { setClipPosition, trackWidthPx } from "./models/timeline.js";
 
 export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, requestRender }) {
   const template = layersEl.querySelector("#layerTemplate");
@@ -11,7 +11,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
   tracksEl.innerHTML = "";
 
-  const w = trackWidthPx(state);
+  const w = trackWidthPx(state.layers, state.pxPerSec);
   layersEl.style.setProperty("--timeline-width", `${w}px`);
 
   for (const l of state.layers) {
@@ -24,7 +24,6 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const clipEl = frag.querySelector(".clip");
     const delEl = frag.querySelector(".del");
 
-    // NEW: tiled waveform container
     const waveEl = frag.querySelector(".wave");
 
     nameEl.textContent = `${l.name} (${l.buffer.duration.toFixed(2)}s)`;
@@ -36,13 +35,12 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
     const clipW = Math.max(30, Math.ceil(l.buffer.duration * state.pxPerSec));
     clipEl.style.width = `${clipW}px`;
-    setClipPosition(state, clipEl, l.offset);
+    setClipPosition(clipEl, l.offset, state.pxPerSec);
 
-    // NEW: draw waveform in tiles to avoid huge canvas blur
     if (waveEl) {
       waveEl.innerHTML = "";
 
-      const clipH = 96; // matches .track height
+      const clipH = 96;
       const tileMaxCssPx = 1600;
 
       for (let x0 = 0; x0 < clipW; x0 += tileMaxCssPx) {
@@ -58,12 +56,11 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         waveEl.appendChild(c);
       }
     } else {
-      // Fallback if template still has a single canvas
       const canvasEl = frag.querySelector("canvas");
       if (canvasEl) {
         const clipH = 96;
         setCanvasSize(canvasEl, clipW, clipH);
-        drawWaveform(canvasEl, l.buffer);
+        drawWaveform(canvasEl, l.buffer, 0, l.buffer.duration);
       }
     }
 
@@ -87,7 +84,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
     offsetEl.addEventListener("input", () => {
       l.offset = Math.max(0, Number(offsetEl.value) || 0);
-      setClipPosition(state, clipEl, l.offset);
+      setClipPosition(clipEl, l.offset, state.pxPerSec);
       scheduleSave();
     });
 
@@ -104,7 +101,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         const snapped = Math.max(0, Math.round(raw * 100) / 100);
         l.offset = snapped;
         offsetEl.value = String(snapped);
-        setClipPosition(state, clipEl, snapped);
+        setClipPosition(clipEl, snapped, state.pxPerSec);
       };
 
       const onUp = (ev) => {
@@ -121,12 +118,14 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       clipEl.addEventListener("pointercancel", onUp);
     });
 
-    delEl.addEventListener("click", () => {
-      const idx = state.layers.indexOf(l);
-      if (idx >= 0) state.layers.splice(idx, 1);
-      scheduleSave();
-      requestRender();
-    });
+    if (delEl) {
+      delEl.addEventListener("click", () => {
+        const idx = state.layers.indexOf(l);
+        if (idx >= 0) state.layers.splice(idx, 1);
+        scheduleSave();
+        if (typeof requestRender === "function") requestRender();
+      });
+    }
 
     tracksEl.appendChild(frag);
   }

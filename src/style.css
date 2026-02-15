@@ -249,10 +249,92 @@ h1 img {
      -moz-user-select: none;
           user-select: none;
   touch-action: none;
-  overflow: hidden;
+  /*
+
+  &.hasTrimStart::before,
+  &.hasTrimEnd::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.16) 4px,
+      rgba(0, 0, 0, 0) 4px,
+      rgba(0, 0, 0, 0) 8px
+    );
+  }
+    */
 }
 .clip.dragging {
   cursor: grabbing;
+}
+.clip .trimHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  z-index: 2;
+}
+.clip .trimHandle.left {
+  left: 0;
+}
+.clip .trimHandle.right {
+  right: 0;
+}
+.clip .trimHandle:hover:before {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+}
+.clip.hasTrimStart {
+  box-shadow: -3px 0px 0px 1.5px #fc72bc;
+}
+.clip.hasTrimStart::before {
+  left: 0;
+}
+.clip.hasTrimEnd {
+  box-shadow: 3px 0px 0px 1.5px #fc72bc;
+}
+.clip.hasTrimEnd::after {
+  right: 0;
+}
+.clip.hasTrimEnd.hasTrimStart {
+  box-shadow: -3px 0px 0px 1.5px #fc72bc, 3px 0px 0px 1.5px #fc72bc;
+}
+.clip .trimInfo {
+  position: absolute;
+  top: 38%;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  color: #fc72bc;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #fc72bc;
+  display: none;
+}
+.clip .trimInfo.left {
+  left: -12px;
+  transform: translateX(-100%);
+}
+.clip .trimInfo.right {
+  right: -12px;
+  transform: translateX(100%);
 }
 
 .wave {

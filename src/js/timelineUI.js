@@ -1,6 +1,13 @@
 import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
 import { setCanvasSize } from "./canvasFit.js";
-import { setClipPosition, trackWidthPx } from "./models/timeline.js";
+import { setClipPosition, trackWidthPx, clipDuration } from "./models/timeline.js";
+import { createTrimFeature } from "./features/trimFeature.js";
+
+function fmtSec(s) {
+  const n = Number(s) || 0;
+  if (n <= 0) return "";
+  return n < 1 ? `${n.toFixed(2)}s` : `${n.toFixed(1)}s`;
+}
 
 export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, requestRender }) {
   const template = layersEl.querySelector("#layerTemplate");
@@ -14,6 +21,8 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
   const w = trackWidthPx(state.layers, state.pxPerSec);
   layersEl.style.setProperty("--timeline-width", `${w}px`);
 
+  const trim = createTrimFeature({ state, scheduleSave });
+
   for (const l of state.layers) {
     const frag = template.content.cloneNode(true);
 
@@ -25,6 +34,9 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const delEl = frag.querySelector(".del");
 
     const waveEl = frag.querySelector(".wave");
+    const trimInEl = frag.querySelector(".trimInfo.left");
+    const trimOutEl = frag.querySelector(".trimInfo.right");
+
 
     nameEl.textContent = `${l.name} (${l.buffer.duration.toFixed(2)}s)`;
     offsetEl.value = String(l.offset);
@@ -33,10 +45,66 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     volEl.value = String(Number.isFinite(db) ? clampDb(db) : DB_MIN);
     volDbEl.value = formatDb(db);
 
-    const clipW = Math.max(30, Math.ceil(l.buffer.duration * state.pxPerSec));
-    clipEl.style.width = `${clipW}px`;
-    setClipPosition(clipEl, l.offset, state.pxPerSec);
+    const leftHandle = frag.querySelector(".trimHandle.left");
+    const rightHandle = frag.querySelector(".trimHandle.right");
 
+    // immidiately after those lines
+    function redrawClip() {
+      const dur = clipDuration(l);
+      const clipW = Math.max(30, Math.ceil(dur * state.pxPerSec));
+
+      clipEl.style.width = `${clipW}px`;
+      setClipPosition(clipEl, l.offset, state.pxPerSec);
+
+      if (!waveEl) return;
+
+      waveEl.innerHTML = "";
+      const clipH = 96;
+      const tileMaxCssPx = 1600;
+
+      for (let x0 = 0; x0 < clipW; x0 += tileMaxCssPx) {
+        const tileW = Math.min(tileMaxCssPx, clipW - x0);
+        const c = document.createElement("canvas");
+        setCanvasSize(c, tileW, clipH);
+
+        const trimStart = Number(l.trimStart) || 0;
+        const t0 = trimStart + x0 / state.pxPerSec;
+        const t1 = trimStart + (x0 + tileW) / state.pxPerSec;
+
+        drawWaveform(c, l.buffer, t0, t1);
+        waveEl.appendChild(c);
+      }
+
+      const inSec = Number(l.trimStart) || 0;
+      const outSec = Number(l.trimEnd) || 0;
+
+      clipEl.classList.toggle("hasTrimStart", inSec > 0);
+      clipEl.classList.toggle("hasTrimEnd", outSec > 0);
+
+      if (trimInEl) {
+        const t = fmtSec(inSec);
+        trimInEl.textContent = t ? `- ${t}` : "";
+        trimInEl.style.display = t ? "block" : "none";
+      }
+
+      if (trimOutEl) {
+        const t = fmtSec(outSec);
+        trimOutEl.textContent = t ? `+ ${t}` : "";
+        trimOutEl.style.display = t ? "block" : "none";
+      }
+
+    }
+
+    trim.attachTrim({
+      layer: l,
+      leftHandle,
+      rightHandle,
+      redrawClip,
+    });
+
+    redrawClip()
+
+    /*
     if (waveEl) {
       waveEl.innerHTML = "";
 
@@ -63,6 +131,8 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         drawWaveform(canvasEl, l.buffer, 0, l.buffer.duration);
       }
     }
+    
+    */
 
     volEl.addEventListener("input", () => {
       const db = clampDb(Number(volEl.value));

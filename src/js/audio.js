@@ -1,5 +1,5 @@
 import { audioBufferToWav, downloadBlob } from "./wav.js";
-import { projectDuration } from "./models/timeline.js";
+import { projectDuration, clipDuration } from "./models/timeline.js";
 
 export function ensureCtx(state, masterGainValue) {
   if (!state.ctx) {
@@ -77,23 +77,32 @@ export async function startPlayback(state) {
   state.playStartAt = t0;
   state.playheadTimeAtStart = cursor;
 
-  state.playing = state.layers
-    .map((l) => {
-      const clipStart = l.offset;
-      const clipEnd = l.offset + l.buffer.duration;
+state.playing = state.layers
+  .map((l) => {
+    const in0 = Number(l.trimStart) || 0;
+    const dur = clipDuration(l);
+    if (dur <= 0.0001) return null;
 
-      if (cursor >= clipEnd) return null;
+    const clipStart = Number(l.offset) || 0;
+    const clipEnd = clipStart + dur;
 
-      const when = t0 + Math.max(0, clipStart - cursor);
-      const offset = Math.max(0, cursor - clipStart);
+    if (cursor >= clipEnd) return null;
 
-      const src = state.ctx.createBufferSource();
-      src.buffer = l.buffer;
-      src.connect(l.gain);
-      src.start(when, offset);
-      return src;
-    })
-    .filter(Boolean);
+    const when = t0 + Math.max(0, clipStart - cursor);
+
+    const playedFromTimeline = Math.max(0, cursor - clipStart);
+    const offset = in0 + playedFromTimeline;
+
+    const playDur = clipEnd - Math.max(cursor, clipStart);
+    if (playDur <= 0.0001) return null;
+
+    const src = state.ctx.createBufferSource();
+    src.buffer = l.buffer;
+    src.connect(l.gain);
+    src.start(when, offset, playDur);
+    return src;
+  })
+  .filter(Boolean);
 
   const dur = projectDuration(state.layers);
 
@@ -136,7 +145,11 @@ export async function renderMixdownWav(state, masterGainValue) {
 
     src.connect(g);
     g.connect(master);
-    src.start(l.offset);
+    const in0 = Number(l.trimStart) || 0;
+    const dur = clipDuration(l);
+    if (dur <= 0.0001) continue;
+
+    src.start(l.offset, in0, dur);
   }
 
   const out = await offline.startRendering();

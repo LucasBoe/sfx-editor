@@ -19,3 +19,14 @@ export function setCanvasSize(canvas, cssW, cssH) {
     sy: canvas.height / cssH,
   };
 }
+
+function waveScaleFromGain(g) {
+  const n = Number(g);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(0.02, Math.min(n, 8)); // clamp for usability
+}
+
+export function scaleCanvasY(canvas, gain) {
+  console.log(gain);
+      canvas.style.transform = `scaleY(${waveScaleFromGain(gain)})`;
+}

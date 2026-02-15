@@ -1,5 +1,5 @@
 import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
-import { setCanvasSize } from "./canvasFit.js";
+import { setCanvasSize, scaleCanvasY } from "./canvasFit.js";
 import { setClipPosition, trackWidthPx, clipDuration } from "./models/timeline.js";
 import { createTrimFeature } from "./features/trimFeature.js";
 
@@ -32,8 +32,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const volDbEl = frag.querySelector(".volDb");
     const clipEl = frag.querySelector(".clip");
     const delEl = frag.querySelector(".del");
-
-    const waveEl = frag.querySelector(".wave");
+    const canvasWrapperEl = frag.querySelector(".canvas-wrapper");
     const trimInEl = frag.querySelector(".trimInfo.left");
     const trimOutEl = frag.querySelector(".trimInfo.right");
 
@@ -48,7 +47,6 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const leftHandle = frag.querySelector(".trimHandle.left");
     const rightHandle = frag.querySelector(".trimHandle.right");
 
-    // immidiately after those lines
     function redrawClip() {
       const dur = clipDuration(l);
       const clipW = Math.max(30, Math.ceil(dur * state.pxPerSec));
@@ -56,9 +54,9 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       clipEl.style.width = `${clipW}px`;
       setClipPosition(clipEl, l.offset, state.pxPerSec);
 
-      if (!waveEl) return;
+      if (!canvasWrapperEl) return;
 
-      waveEl.innerHTML = "";
+      canvasWrapperEl.innerHTML = "";
       const clipH = 96;
       const tileMaxCssPx = 1600;
 
@@ -66,14 +64,16 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         const tileW = Math.min(tileMaxCssPx, clipW - x0);
         const c = document.createElement("canvas");
         setCanvasSize(c, tileW, clipH);
-
+        
         const trimStart = Number(l.trimStart) || 0;
         const t0 = trimStart + x0 / state.pxPerSec;
         const t1 = trimStart + (x0 + tileW) / state.pxPerSec;
-
+        
         drawWaveform(c, l.buffer, t0, t1);
-        waveEl.appendChild(c);
+        canvasWrapperEl.appendChild(c);
       }
+
+      scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
 
       const inSec = Number(l.trimStart) || 0;
       const outSec = Number(l.trimEnd) || 0;
@@ -105,8 +105,8 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     redrawClip()
 
     /*
-    if (waveEl) {
-      waveEl.innerHTML = "";
+    if (waveContainerEl) {
+      waveContainerEl.innerHTML = "";
 
       const clipH = 96;
       const tileMaxCssPx = 1600;
@@ -121,7 +121,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         const t1 = (x0 + tileW) / state.pxPerSec;
 
         drawWaveform(c, l.buffer, t0, t1);
-        waveEl.appendChild(c);
+        waveContainerEl.appendChild(c);
       }
     } else {
       const canvasEl = frag.querySelector("canvas");
@@ -138,6 +138,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       const db = clampDb(Number(volEl.value));
       l.gain.gain.value = dbToGain(db);
       volDbEl.value = formatDb(db);
+      scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
       scheduleSave();
     });
 
@@ -149,6 +150,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       volDbEl.value = formatDb(db);
 
       l.gain.gain.value = dbToGain(db);
+      scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
       scheduleSave();
     });
 

@@ -4,7 +4,7 @@ $pad: 16px;
 $gap: 12px;
 
 $clip-distance: 3px;
-$controls-width: max(16vw, 20vh );
+$controls-width: calc(max(16vw, 20vh ) - 3px);
 $timeline-header-h: 3vh;
 
 $backdrop-color: #0d1c27;
@@ -398,10 +398,19 @@ h1 {
 .wave {
   height: 100%;
   display: flex;
-}
 
-.wave canvas {
-  flex: 0 0 auto;
+  .wave-container {
+    overflow: hidden;
+    
+    .canvas-wrapper {
+      transform-origin: 0 47.5%;
+      transform: scaleY(100%);
+      
+      canvas {
+        flex: 0 0 auto;
+      }
+    }
+  }
 }
 
 // loading overlay

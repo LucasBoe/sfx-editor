@@ -168,7 +168,7 @@ h1 img {
 
 #layers {
   position: relative;
-  --controls-width: max(16vw, 20vh);
+  --controls-width: calc(max(16vw, 20vh) - 3px);
   --timeline-width: 1000px;
   display: grid;
   gap: 6px;
@@ -206,7 +206,7 @@ h1 img {
   position: fixed;
   left: 0;
   z-index: 5;
-  width: max(16vw, 20vh);
+  width: calc(max(16vw, 20vh) - 3px);
   padding: 0 12px;
   background: rgba(0, 0, 0, 0.1);
   height: 102px;
@@ -221,7 +221,7 @@ h1 img {
 .track {
   position: relative;
   height: 102px;
-  left: max(16vw, 20vh);
+  left: calc(max(16vw, 20vh) - 3px);
 }
 
 .nameWrapper {
@@ -341,8 +341,14 @@ h1 img {
   height: 100%;
   display: flex;
 }
-
-.wave canvas {
+.wave .wave-container {
+  overflow: hidden;
+}
+.wave .wave-container .canvas-wrapper {
+  transform-origin: 0 47.5%;
+  transform: scaleY(100%);
+}
+.wave .wave-container .canvas-wrapper canvas {
   flex: 0 0 auto;
 }
 

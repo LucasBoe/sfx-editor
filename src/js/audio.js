@@ -4,10 +4,22 @@ import { projectDuration, clipDuration } from "./models/timeline.js";
 export function ensureCtx(state, masterGainValue) {
   if (!state.ctx) {
     state.ctx = new AudioContext();
+
     state.masterGain = state.ctx.createGain();
     state.masterGain.gain.value = masterGainValue;
-    state.masterGain.connect(state.ctx.destination);
+
+    state.masterAnalyser = state.ctx.createAnalyser();
+    state.masterAnalyser.fftSize = 2048;
+    state.masterAnalyser.smoothingTimeConstant = 0.2;
+
+    state.masterGain.connect(state.masterAnalyser);
+    state.masterAnalyser.connect(state.ctx.destination);
+
+    state._meterBuf = new Float32Array(state.masterAnalyser.fftSize);
+  } else {
+    state.masterGain.gain.value = masterGainValue;
   }
+
   return state.ctx;
 }
 
@@ -61,6 +73,8 @@ export function stopPlayback(state) {
   if (state.rafId) cancelAnimationFrame(state.rafId);
   state.rafId = null;
 
+  state.onMeterStop?.();
+
   state.playStartAt = null;
   state.playheadTimeAtStart = state.playheadTime || 0;
 }
@@ -70,6 +84,7 @@ export async function startPlayback(state) {
 
   await state.ctx.resume();
   stopPlayback(state);
+  state.onMeterReset?.();
 
   const cursor = state.playheadTime || 0;
   const t0 = state.ctx.currentTime + 0.05;
@@ -109,6 +124,7 @@ state.playing = state.layers
   const tick = () => {
     const t = currentPlayTime(state);
     setPlayheadTimeValue(state, t);
+    state.onMeterFrame?.();
 
     if (t >= dur + 0.02) {
       stopPlayback(state);

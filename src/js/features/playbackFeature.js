@@ -13,6 +13,9 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
 
   state.onPlaybackEnded = () => {
     state.playState = "stopped";
+
+    const backTo = Number(state.playSessionStartTime ?? 0);
+    state.setPlayheadTimeValue?.(backTo);
     updatePlayButton();
   };
 

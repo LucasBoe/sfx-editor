@@ -1,4 +1,5 @@
 export const dom = {
+
   timelineShellEl: document.getElementById("timelineShell"),
   filesEl: document.getElementById("files"),
   layersEl: document.getElementById("layers"),
@@ -6,6 +7,11 @@ export const dom = {
   stopEl: document.getElementById("stop"),
   renderEl: document.getElementById("render"),
   clearEl: document.getElementById("clear"),
+
+  globalMeterEl: document.getElementById("globalMeter"),
+  globalMeterFillEl: document.getElementById("globalMeterFill"),
+  globalMeterPeakEl: document.getElementById("globalMeterPeak"),
+  globalMeterClipEl: document.getElementById("globalMeterClip"),
 
   masterVolEl: document.getElementById("masterVol"),
   masterDbEl: document.getElementById("masterDb"),

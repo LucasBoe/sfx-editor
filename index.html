@@ -8,7 +8,20 @@
 
   <body>
     <div class="container">
-      <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.0</img></h1>
+      <div class="row">
+        <div class="col">
+          <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.0</img></h1>
+        </div>
+        <div class="col d-flex align-items-center gap-2">
+          <div id="globalMeter" class="meter" title="Click to reset peak and clip">
+            <div id="globalMeterFill" class="meterFill" style="width: 0%;">
+              <div id="globalMeterColor"></div>
+            </div>
+            <div id="globalMeterPeak" class="meterPeak"></div>
+            <div id="globalMeterClip" class="meterClip"></div>
+          </div>
+        </div>
+      </div>
 
       <div class="row d-flex gap-2 align-items-center flex-wrap mb-3">
 

@@ -22,6 +22,7 @@ import { initImport } from "../features/importFeature.js";
 import { initPlayback } from "../features/playbackFeature.js";
 import { createPersistence } from "../features/persistenceFeature.js";
 import { initScroll } from "../features/scrollFeature.js";
+import { createGlobalMeterFeature } from "../features/globalMeterFeature.js";
 
 const state = {
   ctx: null,
@@ -119,6 +120,13 @@ initImport({
   renderAll,
   scheduleSave,
 });
+
+const meter = createGlobalMeterFeature({ state, dom });
+state.onMeterFrame = () => meter.update();
+state.onMeterStop = () => meter.onStop();
+state.onMeterReset = () => meter.reset();
+
+
 
 dom.renderEl.addEventListener("click", async () => {
   ensureCtx(state, dbToGain(Number(dom.masterVolEl.value)));

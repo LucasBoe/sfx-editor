@@ -1,4 +1,70 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
+#globalMeter {
+  width: min(40vw, 60vh);
+  height: 4vh;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: #0d1c27;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+#globalMeter:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+#globalMeter:active {
+  transform: translateY(1px);
+}
+
+#globalMeterFill {
+  position: absolute;
+  inset: 0;
+  width: min(40vw, 60vh);
+  transform-origin: left center;
+  overflow: hidden;
+}
+#globalMeterFill #globalMeterColor {
+  width: min(40vw, 60vh);
+  height: 100%;
+  background: linear-gradient(90deg, #008a00 0%, #52b152 25%, #f2ea00 55%, #fff200 62%, #ff9d00 78%, #e21d1d 92%);
+}
+
+#globalMeterPeak {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  left: 0%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+}
+
+#globalMeterClip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  right: 0;
+  background: var(--bs-danger);
+  opacity: 0;
+}
+
+#globalMeter.clipHold {
+  border-color: rgba(220, 53, 69, 0.45);
+}
+#globalMeter.clipHold #globalMeterFill {
+  background: linear-gradient(90deg, rgba(220, 53, 69, 0.35), rgba(220, 53, 69, 0.95));
+}
+#globalMeter.clipHold #globalMeterPeak {
+  background: rgb(220, 53, 69);
+  box-shadow: 0 0 8px rgba(220, 53, 69, 0.35);
+}
+#globalMeter.clipHold #globalMeterClip {
+  opacity: 1;
+}
+
 body {
   background: #11222e;
 }

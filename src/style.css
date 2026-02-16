@@ -266,9 +266,12 @@ h1 img {
   display: flex;
   position: relative;
   border-bottom: 0.5px rgba(255, 255, 255, 0.16) solid;
+  z-index: 0;
 }
-
-.layerControls {
+.layer:focus-within {
+  z-index: 50;
+}
+.layer .layerControls {
   position: fixed;
   left: 0;
   z-index: 5;
@@ -277,32 +280,29 @@ h1 img {
   background: rgba(0, 0, 0, 0.1);
   height: 102px;
 }
-.layerControls .small {
+.layer .layerControls .small {
   visibility: hidden;
 }
-.layerControls input[type=range] {
+.layer .layerControls input[type=range] {
   width: 100%;
 }
-
-.track {
+.layer .track {
   position: relative;
   height: 102px;
   left: calc(max(16vw, 20vh) - 3px);
 }
-
-.nameWrapper {
+.layer .nameWrapper {
   position: fixed;
   margin-left: 12px;
   margin-top: 12px;
   width: 0;
   font-size: 0.75em;
 }
-.nameWrapper .name {
+.layer .nameWrapper .name {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.clip {
+.layer .clip {
   position: absolute;
   top: 3px;
   height: 96px;
@@ -336,10 +336,10 @@ h1 img {
   }
     */
 }
-.clip.dragging {
+.layer .clip.dragging {
   cursor: grabbing;
 }
-.clip .trimHandle {
+.layer .clip .trimHandle {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -347,13 +347,13 @@ h1 img {
   cursor: ew-resize;
   z-index: 2;
 }
-.clip .trimHandle.left {
+.layer .clip .trimHandle.left {
   left: 0;
 }
-.clip .trimHandle.right {
+.layer .clip .trimHandle.right {
   right: 0;
 }
-.clip .trimHandle:hover:before {
+.layer .clip .trimHandle:hover:before {
   content: "";
   position: absolute;
   top: 10%;
@@ -364,22 +364,22 @@ h1 img {
   background: rgba(255, 255, 255, 0.35);
   border-radius: 2px;
 }
-.clip.hasTrimStart {
+.layer .clip.hasTrimStart {
   box-shadow: -3px 0px 0px 1.5px #fc72bc;
 }
-.clip.hasTrimStart::before {
+.layer .clip.hasTrimStart::before {
   left: 0;
 }
-.clip.hasTrimEnd {
+.layer .clip.hasTrimEnd {
   box-shadow: 3px 0px 0px 1.5px #fc72bc;
 }
-.clip.hasTrimEnd::after {
+.layer .clip.hasTrimEnd::after {
   right: 0;
 }
-.clip.hasTrimEnd.hasTrimStart {
+.layer .clip.hasTrimEnd.hasTrimStart {
   box-shadow: -3px 0px 0px 1.5px #fc72bc, 3px 0px 0px 1.5px #fc72bc;
 }
-.clip .trimInfo {
+.layer .clip .trimInfo {
   position: absolute;
   top: 38%;
   z-index: 10;
@@ -394,28 +394,177 @@ h1 img {
   border: 1px solid #fc72bc;
   display: none;
 }
-.clip .trimInfo.left {
+.layer .clip .trimInfo.left {
   left: -12px;
   transform: translateX(-100%);
 }
-.clip .trimInfo.right {
+.layer .clip .trimInfo.right {
   right: -12px;
   transform: translateX(100%);
 }
-
-.wave {
+.layer .wave {
   height: 100%;
   display: flex;
 }
-.wave .wave-container {
+.layer .wave .wave-container {
   overflow: hidden;
 }
-.wave .wave-container .canvas-wrapper {
+.layer .wave .wave-container .canvas-wrapper {
   transform-origin: 0 47.5%;
   transform: scaleY(100%);
 }
-.wave .wave-container .canvas-wrapper canvas {
+.layer .wave .wave-container .canvas-wrapper canvas {
   flex: 0 0 auto;
+}
+.layer .effectsRack {
+  position: fixed;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  height: 102px;
+  padding: 6px;
+  background: rgba(149, 0, 75, 0.158);
+  -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+.layer .dropdown-menu {
+  z-index: 1000;
+}
+.layer .fxAdd {
+  --bs-btn-color: #fd3991;
+  --bs-btn-border-color: #fd3991;
+  --bs-btn-hover-bg: #fd3991;
+  --bs-btn-hover-border-color: #fd3991;
+  --bs-btn-hover-color: #0d1c27;
+  --bs-btn-active-bg: #fd3991;
+  --bs-btn-active-border-color: #fd3991;
+  --bs-btn-active-color: #0d1c27;
+}
+.layer .fxAdd::after {
+  content: none;
+}
+.layer .fxList {
+  display: flex;
+}
+.layer .fxBlock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid #fd3991;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  margin-left: 6px;
+}
+.layer .fxBlock.active {
+  background: rgba(198, 29, 105, 0.402);
+  box-shadow: 0 0 0 3px rgba(253, 57, 145, 0.55);
+}
+.layer .fxBlock.disabled {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.layer .fxBtns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.layer .fxSwitch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  margin: 0;
+}
+.layer .fxSwitch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.layer .fxSlider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(253, 57, 145, 0.55);
+  border-radius: 999px;
+  transition: 0.15s;
+}
+.layer .fxSlider::before {
+  content: "";
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  transition: 0.15s;
+}
+.layer .fxSwitch input:checked + .fxSlider {
+  background: rgba(253, 57, 145, 0.22);
+  border-color: #fd3991;
+}
+.layer .fxSwitch input:checked + .fxSlider::before {
+  transform: translate(16px, -50%);
+  background: #fd3991;
+}
+.layer .fxRemove {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0 2px;
+  cursor: pointer;
+  height: 20px;
+  border-radius: 0 0 4px 4px;
+}
+.layer .fxRemove:hover {
+  background: #dc3545;
+  color: white;
+  outline: solid 1px rgb(252, 77, 94);
+}
+
+.autoSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.autoCurve {
+  fill: none;
+  stroke: #fd3991;
+  stroke-width: 2;
+  opacity: 0.25;
+}
+
+.autoCurve.active {
+  opacity: 0.9;
+}
+
+.autoKey {
+  fill: #fd3991;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1;
+  pointer-events: all;
+  cursor: pointer;
+  opacity: 0.25;
+}
+
+.autoKey.active {
+  opacity: 1;
 }
 
 .loading {

@@ -14,8 +14,12 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
         playSessionStartTime: state.playSessionStartTime,
         pxPerSec: state.pxPerSec,
         layers: state.layers.map((l) => ({
+          id: l.id,
           name: l.name,
           offset: l.offset,
+          trimStart: l.trimStart,
+          trimEnd: l.trimEnd,
+          effects: l.effects ?? [],
           gain: l.gain.gain.value,
           audio: l.audio,
         })),
@@ -58,11 +62,15 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
         const buffer = await decodeAudio(state.ctx, audio.slice(0));
         const gain = createGainToMaster(state, Number(item.gain ?? 1));
         state.layers.push({
+          id: item.id || crypto.randomUUID(),
           name: item.name,
           buffer,
           audio,
           gain,
           offset: Number(item.offset ?? 0),
+          trimStart: Number(item.trimStart ?? 0),
+          trimEnd: Number(item.trimEnd ?? 0),
+          effects: Array.isArray(item.effects) ? item.effects : [],
         });
       }
 

@@ -1,5 +1,6 @@
 import { audioBufferToWav, downloadBlob } from "./wav.js";
 import { projectDuration, clipDuration } from "./models/timeline.js";
+import { connectSourceThroughEffects } from "./models/effects.js";
 
 export function ensureCtx(state, masterGainValue) {
   if (!state.ctx) {
@@ -113,7 +114,13 @@ state.playing = state.layers
 
     const src = state.ctx.createBufferSource();
     src.buffer = l.buffer;
-    src.connect(l.gain);
+    connectSourceThroughEffects(
+      state.ctx,
+      src,
+      l,
+      l.gain,
+      { absStartTime: when, srcStart: offset, srcEnd: offset + playDur }
+    );
     src.start(when, offset, playDur);
     return src;
   })
@@ -159,7 +166,14 @@ export async function renderMixdownWav(state, masterGainValue) {
     const g = offline.createGain();
     g.gain.value = l.gain.gain.value;
 
-    src.connect(g);
+    connectSourceThroughEffects(
+      offline,
+      src,
+      l,
+      g,
+      { absStartTime: l.offset, srcStart: in0, srcEnd: in0 + dur }
+    );
+
     g.connect(master);
     const in0 = Number(l.trimStart) || 0;
     const dur = clipDuration(l);

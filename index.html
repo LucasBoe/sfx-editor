@@ -10,7 +10,7 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.0</img></h1>
+          <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.1</img></h1>
         </div>
         <div class="col d-flex align-items-center gap-2">
           <div id="globalMeter" class="meter" title="Click to reset peak and clip">
@@ -119,14 +119,55 @@
                       </div>
                     </div>
                   </div>
+                  <svg class="autoSvg"></svg>
                   <div class="trimHandle left" title="Trim start"></div>
                   <div class="trimHandle right" title="Trim end"></div>
                   <div class="trimInfo left"></div>
                   <div class="trimInfo right"></div>
                 </div>
               </div>
+
+              <div class="effectsRack">
+                <div class="btn-group">
+                  <button
+                    class="fxAdd btn btn-outline-secondary btn-sm dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="Add effect"
+                  >
+                    +
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end fxMenu"></ul>
+                </div>
+
+                <div class="fxList"></div>
+              </div>
+
             </div>
           </template>
+
+          <template id="fxMenuItemTemplate">
+            <button type="button" class="dropdown-item fxMenuItem"></button>
+          </template>
+
+          <template id="fxBlockTemplate">
+            <div class="fxBlock" role="button" tabindex="0">
+              <div class="fxTitle">Effect</div>
+
+              <div class="fxBtns">
+                <label class="fxSwitch" title="Enable effect">
+                  <input class="fxEnabled" type="checkbox" />
+                  <span class="fxSlider"></span>
+                </label>
+              </div>
+
+                <button type="button" class="fxRemove del" title="Remove effect" aria-label="Remove effect">
+                  <span class="icon-bin"></span>
+                </button>
+            </div>
+          </template>
+
         </div>
 
         <div id="globalPlayhead" class="globalPlayhead"></div>

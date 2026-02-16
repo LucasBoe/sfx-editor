@@ -6,13 +6,17 @@ $gap: 12px;
 $clip-distance: 3px;
 $controls-width: calc(max(16vw, 20vh ) - 3px);
 $timeline-header-h: 3vh;
+$clip-height: 96px;
+$layer-height: calc($clip-height + 2 * $clip-distance);
 
 $backdrop-color: #0d1c27;
 $zoom-color: #6edff6;
 $play-stop-color: #ffd042; 
 $clip-border-color: #fcd972;
 $clip-crop-color: #fc72bc;
+$effect-color: #fd3991; // same vibe as your waveform
 $meter-fill-color: #79dfc1; // same vibe as your waveform
+$delete-color: #dc3545;
 
 // globals
 
@@ -335,171 +339,348 @@ h1 {
   position: relative;
   $border-color: rgba(255, 255, 255, 0.16);
   border-bottom: .5px $border-color solid;
-}
+  z-index: 0;
 
-.layerControls {
-  position: fixed;
-  left: 0;
-  z-index: 5;
-  width: $controls-width;
-  padding: 0 12px;
-  background: rgba(0,0,0,.1);
-  height: calc(96px + 2 * $clip-distance);
-
-  .small {
-    visibility: hidden;
+  &:focus-within {
+    z-index: 50;
   }
-
-  input[type="range"] {
-    width: 100%;
-  }
-}
-
-// tracks and clips
-
-.track {
-  position: relative;
-  height: calc(96px + 2 * $clip-distance);
-  left: $controls-width;
-}
-
-.nameWrapper {
-  position: fixed;
-  margin-left: 12px;
-  margin-top: 12px;
-  width: 0;
-  font-size: 0.75em;
-
-  .name {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.clip {
-  position: absolute;
-  top: $clip-distance;
-  height: 96px;
-  border-radius: 0.375rem;
-  outline: solid $clip-border-color;
-  outline-width: 1.5px;
-  background: $backdrop-color;
-
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-
-  &.dragging {
-    cursor: grabbing;
-  }
-
-  .trimHandle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 12px;
-    cursor: ew-resize;
-    z-index: 2;
-  }
-
-  .trimHandle.left { left: 0; }
-  .trimHandle.right { right: 0; }
-
-  .trimHandle:hover:before {
-    content: "";
-    position: absolute;
-    top: 10%;
-    bottom: 10%;
-    left: 50%;
-    width: 2px;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 2px;
-  }
-  /*
-
-  &.hasTrimStart::before,
-  &.hasTrimEnd::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 20px;
-    z-index: 1;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.16),
-      rgba(255, 255, 255, 0.16) 4px,
-      rgba(0, 0, 0, 0) 4px,
-      rgba(0, 0, 0, 0) 8px
-    );
-  }
-    */
-
-  &.hasTrimStart {
-    box-shadow: -3px 0px 0px 1.5px $clip-crop-color;
-    &::before {
-      left: 0;
+  
+  .layerControls {
+    position: fixed;
+    left: 0;
+    z-index: 5;
+    width: $controls-width;
+    padding: 0 12px;
+    background: rgba(0,0,0,.1);
+    height: $layer-height;
+    
+    .small {
+      visibility: hidden;
+    }
+    
+    input[type="range"] {
+      width: 100%;
     }
   }
 
-  &.hasTrimEnd {
-    box-shadow: 3px 0px 0px 1.5px $clip-crop-color;
-    &::after {
-      right: 0;
+  // tracks and clips
+
+  .track {
+    position: relative;
+    height: $layer-height;
+    left: $controls-width;
+  }
+
+  .nameWrapper {
+    position: fixed;
+    margin-left: 12px;
+    margin-top: 12px;
+    width: 0;
+    font-size: 0.75em;
+
+    .name {
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+  }
+
+  .clip {
+    position: absolute;
+    top: $clip-distance;
+    height: $clip-height;
+    border-radius: 0.375rem;
+    outline: solid $clip-border-color;
+    outline-width: 1.5px;
+    background: $backdrop-color;
+
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+
+    &.dragging {
+      cursor: grabbing;
+    }
+
+    .trimHandle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 12px;
+      cursor: ew-resize;
+      z-index: 2;
+    }
+
+    .trimHandle.left { left: 0; }
+    .trimHandle.right { right: 0; }
+
+    .trimHandle:hover:before {
+      content: "";
+      position: absolute;
+      top: 10%;
+      bottom: 10%;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 2px;
+    }
+    /*
+
+    &.hasTrimStart::before,
+    &.hasTrimEnd::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 20px;
+      z-index: 1;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.16) 4px,
+        rgba(0, 0, 0, 0) 4px,
+        rgba(0, 0, 0, 0) 8px
+      );
+    }
+      */
 
     &.hasTrimStart {
-      box-shadow: -3px 0px 0px 1.5px $clip-crop-color, 3px 0px 0px 1.5px $clip-crop-color;
+      box-shadow: -3px 0px 0px 1.5px $clip-crop-color;
+      &::before {
+        left: 0;
+      }
+    }
+
+    &.hasTrimEnd {
+      box-shadow: 3px 0px 0px 1.5px $clip-crop-color;
+      &::after {
+        right: 0;
+      }
+
+      &.hasTrimStart {
+        box-shadow: -3px 0px 0px 1.5px $clip-crop-color, 3px 0px 0px 1.5px $clip-crop-color;
+      }
+    }
+
+    .trimInfo {
+      position: absolute;
+      top: 38%;
+      z-index: 10;
+      pointer-events: none;
+
+      font-size: 11px;
+      line-height: 1;
+      padding: 3px 6px;
+      border-radius: 6px;
+      white-space: nowrap;
+
+      color: $clip-crop-color;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid $clip-crop-color;
+
+      display: none;
+    }
+
+    .trimInfo.left {
+    left: -12px;
+    transform: translateX(-100%);
+    }
+    .trimInfo.right {
+      right: -12px;
+      transform: translateX(100%);
     }
   }
 
-  .trimInfo {
-    position: absolute;
-    top: 38%;
-    z-index: 10;
-    pointer-events: none;
+  .wave {
+    height: 100%;
+    display: flex;
 
-    font-size: 11px;
-    line-height: 1;
-    padding: 3px 6px;
-    border-radius: 6px;
-    white-space: nowrap;
-
-    color: $clip-crop-color;
-    background: rgba(0, 0, 0, 0.55);
-    border: 1px solid $clip-crop-color;
-
-    display: none;
-  }
-
-  .trimInfo.left {
-  left: -12px;
-  transform: translateX(-100%);
-  }
-  .trimInfo.right {
-    right: -12px;
-    transform: translateX(100%);
-  }
-}
-
-.wave {
-  height: 100%;
-  display: flex;
-
-  .wave-container {
-    overflow: hidden;
-    
-    .canvas-wrapper {
-      transform-origin: 0 47.5%;
-      transform: scaleY(100%);
+    .wave-container {
+      overflow: hidden;
       
-      canvas {
-        flex: 0 0 auto;
+      .canvas-wrapper {
+        transform-origin: 0 47.5%;
+        transform: scaleY(100%);
+        
+        canvas {
+          flex: 0 0 auto;
+        }
       }
     }
   }
+
+  .effectsRack {
+    position: fixed;
+    right: 0;
+    z-index: 60;
+
+    display: flex;
+
+    height: $layer-height;
+    padding: 6px;
+
+    background: rgba(149, 0, 75, 0.158);
+    backdrop-filter: blur(4px);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .dropdown-menu {
+    z-index: 1000;
+  }
+
+  .fxAdd {
+    --bs-btn-color: #{$effect-color};
+    --bs-btn-border-color: #{$effect-color};
+
+    --bs-btn-hover-bg: #{$effect-color};
+    --bs-btn-hover-border-color: #{$effect-color};
+    --bs-btn-hover-color: #{$backdrop-color};
+
+    --bs-btn-active-bg: #{$effect-color};
+    --bs-btn-active-border-color: #{$effect-color};
+    --bs-btn-active-color: #{$backdrop-color};
+
+    &::after {
+      content: none;
+    }
+  }
+
+  .fxList {
+    display: flex;
+  }
+
+  .fxBlock {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 1;
+    border: 1px solid $effect-color;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.9);
+    margin-left: 6px;
+
+    &.active {
+      background: rgba(198, 29, 105, 0.402);
+      box-shadow: 0 0 0 3px rgba(253, 57, 145, 0.55);
+    }
+
+    &.disabled {
+      opacity: 0.55;
+      border-style: dashed;
+    }
+  }
+
+  .fxBtns {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .fxSwitch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+      margin: 0;
+    }
+
+    .fxSwitch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .fxSlider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(253, 57, 145, 0.55);
+      border-radius: 999px;
+      transition: 0.15s;
+    }
+
+    .fxSlider::before {
+      content: "";
+      position: absolute;
+      height: 14px;
+      width: 14px;
+      left: 1px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      transition: 0.15s;
+    }
+
+    .fxSwitch input:checked + .fxSlider {
+      background: rgba(253, 57, 145, 0.22);
+      border-color: #{$effect-color};
+    }
+
+    .fxSwitch input:checked + .fxSlider::before {
+      transform: translate(16px, -50%);
+      background: #{$effect-color};
+    }
+
+
+  .fxRemove {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 2px;
+    cursor: pointer;
+    height: 20px;
+    border-radius: 0 0 4px 4px;
+
+    &:hover {
+      background: $delete-color;
+      color: white;
+      outline: solid 1px rgb(252, 77, 94);
+    }
+  }
+}
+
+.autoSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.autoCurve {
+  fill: none;
+  stroke: $effect-color;
+  stroke-width: 2;
+  opacity: 0.25;
+}
+
+.autoCurve.active {
+  opacity: 0.9;
+}
+
+.autoKey {
+  fill: $effect-color;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1;
+  pointer-events: all;
+  cursor: pointer;
+  opacity: 0.25;
+}
+
+.autoKey.active {
+  opacity: 1;
 }
 
 // loading overlay

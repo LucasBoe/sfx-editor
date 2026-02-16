@@ -27,6 +27,5 @@ function waveScaleFromGain(g) {
 }
 
 export function scaleCanvasY(canvas, gain) {
-  console.log(gain);
-      canvas.style.transform = `scaleY(${waveScaleFromGain(gain)})`;
+  canvas.style.transform = `scaleY(${waveScaleFromGain(gain)})`;
 }

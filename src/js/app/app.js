@@ -29,6 +29,7 @@ const state = {
   masterGain: null,
   layers: [],
   playing: [],
+  activeFx: null, // { layerId, fxId, param }
   playStartAt: null,
   rafId: null,
 
@@ -52,6 +53,8 @@ const state = {
 
 initPlayhead(state, dom);
 state.setPlayheadTimeValue = (t) => setPlayheadTimeValue(state, t);
+state.startPlayback = () => startPlayback(state);
+state.stopPlayback = () => stopPlayback(state);
 
 function renderAll() {
   const w = trackWidthPx(state.layers, state.pxPerSec);

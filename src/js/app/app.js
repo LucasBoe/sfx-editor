@@ -23,6 +23,7 @@ import { initPlayback } from "../features/playbackFeature.js";
 import { createPersistence } from "../features/persistenceFeature.js";
 import { initScroll } from "../features/scrollFeature.js";
 import { createGlobalMeterFeature } from "../features/globalMeterFeature.js";
+import { initTools } from "../features/toolsFeature.js";
 
 const state = {
   ctx: null,
@@ -95,6 +96,7 @@ initMaster({ state, dom, scheduleSave });
 initPlayback({ state, dom, ensureCtx, startPlayback, stopPlayback });
 initZoom({ state, dom, renderAll, renderRuler: () => ruler.renderRuler(), scheduleSave });
 initScroll({ state, dom, renderRuler: () => ruler.renderRuler(), updatePlayheadPosition });
+initTools({ state, dom, requestRender: renderAll });
 
 const ruler = createRulerFeature({ state, dom });
 ruler.initRulerScrub({ seekToTime, scheduleSave });

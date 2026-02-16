@@ -13,6 +13,10 @@ export const dom = {
   globalMeterPeakEl: document.getElementById("globalMeterPeak"),
   globalMeterClipEl: document.getElementById("globalMeterClip"),
 
+  toolMoveEl: document.getElementById("toolMove"),
+  toolTrimEl: document.getElementById("toolTrim"),
+  toolKeysEl: document.getElementById("toolKeys"),
+
   masterVolEl: document.getElementById("masterVol"),
   masterDbEl: document.getElementById("masterDb"),
 

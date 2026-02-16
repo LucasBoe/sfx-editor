@@ -64,6 +64,9 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
     svgEl._autoBound = true;
 
     svgEl.addEventListener("dblclick", (ev) => {
+      
+      if (state.tools?.keys === false) return;
+
       ev.preventDefault();
       ev.stopPropagation();
 
@@ -104,8 +107,8 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
     );
 
     const keys = fx.automation.freq;
-
-    const active = isActiveFx(state, layer, fx, "freq");
+    const allowKeys = state.tools?.keys !== false;
+    const active = allowKeys && isActiveFx(state, layer, fx, "freq");
 
     const samples = Math.max(32, Math.min(400, Math.floor(clipW / 6)));
     const curve = sampleCurve(keys, s0, s1, samples, baseFreq);
@@ -270,6 +273,10 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
       drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH);
 
+      const trimOn = state.tools?.trim !== false;
+      if (leftHandle) leftHandle.style.display = trimOn ? "" : "none";
+      if (rightHandle) rightHandle.style.display = trimOn ? "" : "none";
+
       const inSec = Number(l.trimStart) || 0;
       const outSec = Number(l.trimEnd) || 0;
 
@@ -357,6 +364,8 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
     clipEl.addEventListener("pointerdown", (e) => {
 
+      if (!state.tools?.move) return;
+      if (e.target?.closest?.(".trimHandle")) return;
       if (e.target?.closest?.(".autoSvg")) return;
 
       clipEl.classList.add("dragging");

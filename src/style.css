@@ -75,6 +75,36 @@ h1 img {
   margin: 0 10px 8px;
 }
 
+body[data-tool-trim="0"] .trimHandle,
+body[data-tool-trim="0"] .trimInfo {
+  display: none !important;
+}
+
+body[data-tool-keys="0"] .autoKey {
+  display: none !important;
+}
+
+body[data-tool-keys="0"] .autoSvg {
+  pointer-events: none;
+}
+
+body[data-tool-move="0"] .clip {
+  cursor: default;
+}
+
+.tools button {
+  --bs-btn-padding-x: 0.75rem;
+  --bs-btn-padding-y: 0.375rem;
+  --bs-btn-color: #797bdf;
+  --bs-btn-border-color: #797bdf;
+  --bs-btn-hover-bg: #797bdf;
+  --bs-btn-hover-border-color: #797bdf;
+  --bs-btn-hover-color: #0d1c27;
+  --bs-btn-active-bg: #797bdf;
+  --bs-btn-active-border-color: #797bdf;
+  --bs-btn-active-color: white;
+}
+
 .volDb,
 #masterDb {
   width: 3em;

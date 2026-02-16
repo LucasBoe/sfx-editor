@@ -9,6 +9,9 @@ export function createTrimFeature({ state, scheduleSave }) {
     if (!leftHandle || !rightHandle) return;
 
     leftHandle.addEventListener("pointerdown", (e) => {
+
+      if (!state.tools?.trim) return;
+
       e.stopPropagation();
       leftHandle.setPointerCapture(e.pointerId);
 

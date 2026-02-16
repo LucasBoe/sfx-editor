@@ -11,6 +11,7 @@ $layer-height: calc($clip-height + 2 * $clip-distance);
 
 $backdrop-color: #0d1c27;
 $zoom-color: #6edff6;
+$tool-color: #797bdf;
 $play-stop-color: #ffd042; 
 $clip-border-color: #fcd972;
 $clip-crop-color: #fc72bc;
@@ -118,6 +119,42 @@ h1 {
     filter: brightness(85%);
     margin: 0 10px 8px;
   }
+}
+
+body[data-tool-trim="0"] .trimHandle,
+body[data-tool-trim="0"] .trimInfo {
+  display: none !important;
+}
+
+body[data-tool-keys="0"] .autoKey {
+  display: none !important;
+}
+
+body[data-tool-keys="0"] .autoSvg {
+  pointer-events: none;
+}
+
+body[data-tool-move="0"] .clip {
+  cursor: default;
+}
+
+.tools {
+  button {
+  --bs-btn-padding-x: 0.75rem;
+  --bs-btn-padding-y: 0.375rem;
+  
+  --bs-btn-color: #{$tool-color};
+  --bs-btn-border-color: #{$tool-color};
+
+  --bs-btn-hover-bg: #{$tool-color};
+  --bs-btn-hover-border-color: #{$tool-color};
+  --bs-btn-hover-color: #{$backdrop-color};
+
+  --bs-btn-active-bg: #{$tool-color};
+  --bs-btn-active-border-color: #{$tool-color};
+  --bs-btn-active-color: #{white};
+  
+}
 }
 
 .volDb,

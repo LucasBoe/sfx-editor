@@ -2,6 +2,8 @@ import { audioBufferToWav, downloadBlob } from "./wav.js";
 import {
   projectDuration,
   clipDuration,
+  clipFadeGainAtSourceTime,
+  clipFadeSourceDurations,
   clipSourceDuration,
   layerPlaybackRate,
 } from "./models/timeline.js";
@@ -85,6 +87,30 @@ export function stopPlayback(state) {
   state.playheadTimeAtStart = state.playheadTime || 0;
 }
 
+function scheduleClipFadeGain(param, layer, play) {
+  if (!param || !play) return;
+
+  const { fadeIn, fadeOut } = clipFadeSourceDurations(layer);
+  if (fadeIn <= 1e-6 && fadeOut <= 1e-6) return;
+
+  const span = Math.max(0, Number(play.srcEnd) - Number(play.srcStart));
+  if (span <= 1e-6) return;
+
+  const rate = Math.max(1e-6, Number(play.playbackRate) || 1);
+  const timelineSpan = span / rate;
+  const samples = Math.max(32, Math.min(1024, Math.ceil(timelineSpan * 240)));
+  const curve = new Float32Array(samples);
+
+  for (let i = 0; i < samples; i++) {
+    const u = samples === 1 ? 0 : i / (samples - 1);
+    const sourceTime = Number(play.srcStart) + span * u;
+    curve[i] = clipFadeGainAtSourceTime(layer, sourceTime);
+  }
+
+  param.cancelScheduledValues(play.absStartTime);
+  param.setValueCurveAtTime(curve, play.absStartTime, timelineSpan);
+}
+
 export async function startPlayback(state) {
   if (!state.layers?.length) return;
 
@@ -98,46 +124,55 @@ export async function startPlayback(state) {
   state.playStartAt = t0;
   state.playheadTimeAtStart = cursor;
 
-state.playing = state.layers
-  .map((l) => {
-    const in0 = Number(l.trimStart) || 0;
-    const rate = layerPlaybackRate(l);
-    const srcDur = clipSourceDuration(l);
-    if (srcDur <= 0.0001) return null;
+  state.playing = state.layers
+    .map((l) => {
+      const in0 = Number(l.trimStart) || 0;
+      const rate = layerPlaybackRate(l);
+      const srcDur = clipSourceDuration(l);
+      if (srcDur <= 0.0001) return null;
 
-    const clipStart = Number(l.offset) || 0;
-    const clipEnd = clipStart + clipDuration(l);
+      const clipStart = Number(l.offset) || 0;
+      const clipEnd = clipStart + clipDuration(l);
 
-    if (cursor >= clipEnd) return null;
+      if (cursor >= clipEnd) return null;
 
-    const when = t0 + Math.max(0, clipStart - cursor);
+      const when = t0 + Math.max(0, clipStart - cursor);
 
-    const playedFromTimeline = Math.max(0, cursor - clipStart);
-    const playedFromSource = playedFromTimeline * rate;
-    const offset = in0 + playedFromSource;
+      const playedFromTimeline = Math.max(0, cursor - clipStart);
+      const playedFromSource = playedFromTimeline * rate;
+      const offset = in0 + playedFromSource;
 
-    const playSrcDur = srcDur - playedFromSource;
-    if (playSrcDur <= 0.0001) return null;
+      const playSrcDur = srcDur - playedFromSource;
+      if (playSrcDur <= 0.0001) return null;
 
-    const src = state.ctx.createBufferSource();
-    src.buffer = l.buffer;
-    src.playbackRate.value = rate;
-    connectSourceThroughEffects(
-      state.ctx,
-      src,
-      l,
-      l.gain,
-      {
+      const src = state.ctx.createBufferSource();
+      src.buffer = l.buffer;
+      src.playbackRate.value = rate;
+      const clipGain = state.ctx.createGain();
+      clipGain.gain.value = 1;
+      connectSourceThroughEffects(
+        state.ctx,
+        src,
+        l,
+        clipGain,
+        {
+          absStartTime: when,
+          srcStart: offset,
+          srcEnd: offset + playSrcDur,
+          playbackRate: rate,
+        }
+      );
+      scheduleClipFadeGain(clipGain.gain, l, {
         absStartTime: when,
         srcStart: offset,
         srcEnd: offset + playSrcDur,
         playbackRate: rate,
-      }
-    );
-    src.start(when, offset, playSrcDur);
-    return src;
-  })
-  .filter(Boolean);
+      });
+      clipGain.connect(l.gain);
+      src.start(when, offset, playSrcDur);
+      return src;
+    })
+    .filter(Boolean);
 
   const dur = projectDuration(state.layers);
 
@@ -184,12 +219,14 @@ export async function renderMixdownWav(state, masterGainValue) {
 
     const g = offline.createGain();
     g.gain.value = l.gain.gain.value;
+    const clipGain = offline.createGain();
+    clipGain.gain.value = 1;
 
     connectSourceThroughEffects(
       offline,
       src,
       l,
-      g,
+      clipGain,
       {
         absStartTime: l.offset,
         srcStart: in0,
@@ -198,6 +235,14 @@ export async function renderMixdownWav(state, masterGainValue) {
       }
     );
 
+    scheduleClipFadeGain(clipGain.gain, l, {
+      absStartTime: l.offset,
+      srcStart: in0,
+      srcEnd: in0 + srcDur,
+      playbackRate: rate,
+    });
+
+    clipGain.connect(g);
     g.connect(master);
     src.start(l.offset, in0, srcDur);
   }

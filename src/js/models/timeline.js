@@ -1,6 +1,14 @@
 export const PITCH_MIN_SEMITONES = -24;
 export const PITCH_MAX_SEMITONES = 24;
 export const SNAP_THRESHOLD_PX = 12;
+export const FADE_DB_FLOOR = -96;
+
+const MIN_CLIP_BODY_SOURCE_DUR = 0.01;
+const FADE_MIN_GAIN = Math.pow(10, FADE_DB_FLOOR / 20);
+
+function clamp01(x) {
+  return Math.max(0, Math.min(1, x));
+}
 
 export function clampPitchSemitones(semitones) {
   const n = Number(semitones);
@@ -33,6 +41,80 @@ export function clipSourceDuration(layer) {
   const a = Number(layer?.trimStart) || 0;
   const b = Number(layer?.trimEnd) || 0;
   return Math.max(0, bufDur - a - b);
+}
+
+export function clipFadeSourceDurations(layer) {
+  const srcDur = clipSourceDuration(layer);
+  const maxCombined = Math.max(0, srcDur - MIN_CLIP_BODY_SOURCE_DUR);
+
+  let fadeIn = Math.max(0, Number(layer?.fadeIn) || 0);
+  let fadeOut = Math.max(0, Number(layer?.fadeOut) || 0);
+
+  fadeIn = Math.min(fadeIn, maxCombined);
+  fadeOut = Math.min(fadeOut, maxCombined);
+
+  if (fadeIn + fadeOut > maxCombined) {
+    const overflow = fadeIn + fadeOut - maxCombined;
+    if (fadeOut > fadeIn) fadeOut = Math.max(0, fadeOut - overflow);
+    else fadeIn = Math.max(0, fadeIn - overflow);
+  }
+
+  return { fadeIn, fadeOut, srcDur };
+}
+
+export function normalizeLayerFades(layer) {
+  if (!layer) return { fadeIn: 0, fadeOut: 0, srcDur: 0 };
+  const next = clipFadeSourceDurations(layer);
+  layer.fadeIn = next.fadeIn;
+  layer.fadeOut = next.fadeOut;
+  return next;
+}
+
+export function clipFadeInDuration(layer) {
+  const { fadeIn } = clipFadeSourceDurations(layer);
+  return fadeIn / layerPlaybackRate(layer);
+}
+
+export function clipFadeOutDuration(layer) {
+  const { fadeOut } = clipFadeSourceDurations(layer);
+  return fadeOut / layerPlaybackRate(layer);
+}
+
+function fadeInGainAt(progress) {
+  const t = clamp01(progress);
+  return FADE_MIN_GAIN + (1 - FADE_MIN_GAIN) * Math.sin((t * Math.PI) / 2);
+}
+
+function fadeOutGainAt(progress) {
+  const t = clamp01(progress);
+  return FADE_MIN_GAIN + (1 - FADE_MIN_GAIN) * Math.cos((t * Math.PI) / 2);
+}
+
+export function clipFadeGainAtSourceTime(layer, sourceTime) {
+  const { fadeIn, fadeOut, srcDur } = clipFadeSourceDurations(layer);
+  if (srcDur <= 1e-6) return 1;
+
+  const sourceStart = Number(layer?.trimStart) || 0;
+  const sourceEnd = sourceStart + srcDur;
+  const s = Math.max(sourceStart, Math.min(sourceEnd, Number(sourceTime) || sourceStart));
+
+  let gain = 1;
+
+  if (fadeIn > 1e-6 && s < sourceStart + fadeIn) {
+    gain = Math.min(gain, fadeInGainAt((s - sourceStart) / fadeIn));
+  }
+
+  if (fadeOut > 1e-6 && s > sourceEnd - fadeOut) {
+    gain = Math.min(gain, fadeOutGainAt((s - (sourceEnd - fadeOut)) / fadeOut));
+  }
+
+  return clamp01(gain);
+}
+
+export function clipFadeDbAtSourceTime(layer, sourceTime) {
+  const gain = clipFadeGainAtSourceTime(layer, sourceTime);
+  if (gain <= 0) return FADE_DB_FLOOR;
+  return Math.max(FADE_DB_FLOOR, 20 * Math.log10(gain));
 }
 
 export function clipDuration(layer) {

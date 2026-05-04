@@ -117,16 +117,23 @@
                   value="0"
                 />
 
-                <div class="volRow">
-                  <span class="volLabel">Vol</span>
-                  <input class="vol form-range range-custom" type="range" min="-80" max="12" step="0.1" value="0" />
-                  <input class="volDb" type="text" value="0.0" />
-                  <span class="dbSuffix">dB</span>
+                <div class="controlsTop">
+                  <button type="button" class="layerBtn del" title="Delete layer" aria-label="Delete layer">
+                    <span class="icon-bin"></span>
+                  </button>
+                  <button type="button" class="layerBtn mute" title="Mute layer" aria-label="Mute layer" aria-pressed="false">
+                    <span class="icon-volume-medium"></span>
+                  </button>
                 </div>
 
-                <button type="button" class="btn btn-outline-danger btn-sm del" title="Delete layer">
-                  <span class="icon-bin"></span>
-                </button>
+                <div class="volRow">
+                  <span class="volLabel">Vol</span>
+                  <input class="vol form-range range-custom" type="range" min="-80" max="12" step="0.1" value="0" aria-label="Volume" />
+                  <div class="volPill">
+                    <input class="volDb" type="text" value="0.0" aria-label="Volume in dB" />
+                    <span class="dbSuffix">dB</span>
+                  </div>
+                </div>
 
               </div>
 
@@ -142,9 +149,14 @@
                       </div>
                     </div>
                   </div>
+                  <svg class="fadeSvg"></svg>
                   <svg class="autoSvg"></svg>
+                  <div class="fadeHandle left" title="Fade in"></div>
+                  <div class="fadeHandle right" title="Fade out"></div>
                   <div class="trimHandle left" title="Trim start"></div>
                   <div class="trimHandle right" title="Trim end"></div>
+                  <div class="fadeInfo left"></div>
+                  <div class="fadeInfo right"></div>
                   <div class="trimInfo left"></div>
                   <div class="trimInfo right"></div>
                 </div>
@@ -176,19 +188,20 @@
 
           <template id="fxBlockTemplate">
             <div class="fxBlock" role="button" tabindex="0">
-              <div class="fxTitle">Effect</div>
-              <div class="fxBody"></div>
-
-              <div class="fxBtns">
-                <label class="fxSwitch" title="Enable effect">
-                  <input class="fxEnabled" type="checkbox" />
-                  <span class="fxSlider"></span>
-                </label>
+              <div class="fxHeader">
+                <div class="fxMain">
+                  <label class="fxSwitch" title="Enable effect">
+                    <input class="fxEnabled" type="checkbox" />
+                    <span class="fxSlider"></span>
+                  </label>
+                  <div class="fxTitle">Effect</div>
+                </div>
+                <div class="fxValueSlot"></div>
               </div>
-
-                <button type="button" class="fxRemove del" title="Remove effect" aria-label="Remove effect">
-                  <span class="icon-bin"></span>
-                </button>
+              <div class="fxBody"></div>
+              <button type="button" class="fxRemove del" title="Remove effect" aria-label="Remove effect">
+                <span class="icon-bin"></span>
+              </button>
             </div>
           </template>
 

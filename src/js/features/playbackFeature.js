@@ -21,9 +21,7 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
 
   updatePlayButton();
 
-  dom.playEl.addEventListener("click", async () => {
-    ensureCtx(state, dbToGain(Number(dom.masterVolEl.value)));
-
+  async function togglePlayback() {
     if (state.playState === "playing") {
       state.playState = "paused";
       stopPlayback(state);
@@ -31,13 +29,52 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
       return;
     }
 
+    if (!state.layers?.length) {
+      state.playState = "stopped";
+      updatePlayButton();
+      return;
+    }
+
+    ensureCtx(state, dbToGain(Number(dom.masterVolEl.value)));
+
     if (state.playState === "stopped") {
       state.playSessionStartTime = state.playheadTime;
     }
 
     state.playState = "playing";
     await startPlayback(state);
+    if (state.playStartAt === null) {
+      state.playState = "stopped";
+    }
     updatePlayButton();
+  }
+
+  function isTypingTarget(target) {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest(
+        'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]'
+      )
+    );
+  }
+
+  function isHandledByFocusedControl(target) {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest('button, a[href], summary, [role="button"]'));
+  }
+
+  dom.playEl.addEventListener("click", async () => {
+    await togglePlayback();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const isSpace = e.code === "Space" || e.key === " ";
+    if (!isSpace || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.defaultPrevented) return;
+    if (isTypingTarget(e.target) || isHandledByFocusedControl(e.target)) return;
+
+    e.preventDefault();
+    void togglePlayback();
   });
 
   dom.stopEl.addEventListener("click", () => {

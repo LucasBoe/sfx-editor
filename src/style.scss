@@ -379,7 +379,7 @@ body[data-tool-move="0"] .clip {
 .layer {
   --layer-effect-hue: 46;
   --layer-effect-outline: hsl(46 90% 68% / 0.88);
-  --layer-effect-line: hsl(46 76% 62% / 0.18);
+  --layer-effect-line: hsl(46 76% 62% / 0.5);
   --layer-effect-tint: hsl(46 78% 60% / 0.08);
   --layer-effect-tint-strong: hsl(46 82% 62% / 0.12);
   --layer-effect-rack: hsl(46 72% 54% / 0.09);
@@ -400,46 +400,181 @@ body[data-tool-move="0"] .clip {
   .layerControls {
     position: fixed;
     left: 0;
-    z-index: 5;
+    z-index: 70;
     width: $controls-width;
-    padding: 0 12px;
-    background: linear-gradient(135deg, var(--layer-effect-wash), rgba(0, 0, 0, 0.12) 70%);
-    border-right: 1px solid var(--layer-effect-line);
     height: $layer-height;
-    display: grid;
-    align-content: center;
-    gap: 6px;
-    
+
+    // card surface matching effects card language
+    background: linear-gradient(
+        180deg,
+        var(--layer-effect-rack),
+        rgba(13, 28, 39, 0.3)
+      ),
+      linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(0, 0, 0, 0.28) 100%
+      );
+    backdrop-filter: blur(4px);
+    border-left: 2px solid var(--layer-effect-outline);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 1px 0 0 var(--layer-effect-glow);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 14px 10px 12px;
+    gap: 8px;
+
     .small {
       display: none;
     }
 
+    // row 1: delete left, mute right
+    .controlsTop {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    // shared icon button base
+    .layerBtn {
+      display: grid;
+      place-items: center;
+      flex: 0 0 30px;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid;
+      font-size: 13px;
+      padding: 0;
+      line-height: 1;
+      background: rgba(0, 0, 0, 0.28);
+      cursor: pointer;
+      transition: border-color 0.14s, background 0.14s, box-shadow 0.14s, color 0.14s;
+
+      &:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.45);
+        outline-offset: 2px;
+      }
+    }
+
+    // delete: muted red by default, flares on hover
+    .del {
+      color: rgba(220, 53, 69, 0.55);
+      border-color: rgba(220, 53, 69, 0.22);
+
+      &:hover {
+        color: #ff5060;
+        border-color: rgba(220, 53, 69, 0.65);
+        background: rgba(220, 53, 69, 0.12);
+        box-shadow: 0 0 10px rgba(220, 53, 69, 0.22);
+      }
+
+      &:active {
+        background: rgba(220, 53, 69, 0.22);
+        box-shadow: 0 0 14px rgba(220, 53, 69, 0.38);
+      }
+    }
+
+    // mute/speaker: uses layer accent color
+    .mute {
+      color: var(--layer-effect-outline);
+      border-color: var(--layer-effect-line);
+
+      &:hover {
+        border-color: var(--layer-effect-outline);
+        background: rgba(255, 255, 255, 0.055);
+        box-shadow: 0 0 8px var(--layer-effect-glow);
+      }
+
+      &[aria-pressed="true"] {
+        color: rgba(255, 255, 255, 0.28);
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: none;
+
+        &:hover {
+          color: rgba(255, 255, 255, 0.5);
+          border-color: rgba(255, 255, 255, 0.22);
+        }
+      }
+    }
+
+    // row 2: vol label | slider | value pill
     .volRow {
       display: grid;
-      grid-template-columns: 2.7rem 1fr 3em auto;
+      grid-template-columns: 2rem 1fr auto;
       gap: 8px;
       align-items: center;
     }
-    
-    input[type="range"] {
-      width: 100%;
-    }
 
     .volLabel {
-      font-size: 0.75em;
-      opacity: 0.78;
+      font-size: 0.68em;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.52;
+    }
+
+    // slider uses layer accent as thumb color
+    .vol {
+      --range-thumb-bg: var(--layer-effect-outline);
+      --range-track-bg: rgba(255, 255, 255, 0.1);
+      --range-thumb-width: 13px;
+      --range-thumb-height: 13px;
+      --range-track-h: 3px;
+      min-width: 0;
+      margin: 0;
+    }
+
+    // combined dB value + unit pill
+    .volPill {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.14));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      white-space: nowrap;
+
+      &:focus-within {
+        border-color: var(--layer-effect-outline);
+        box-shadow: 0 0 0 2px var(--layer-effect-glow);
+      }
+    }
+
+    .volDb {
+      background: transparent;
+      border: 0;
+      outline: 0;
+      width: 5ch;
+      padding: 0;
+      color: var(--layer-effect-outline);
+      font-size: 0.8em;
+      font-weight: 600;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      min-width: 0;
     }
 
     .dbSuffix {
-      font-size: 0.85em;
-      opacity: 0.7;
+      font-size: 0.68em;
+      opacity: 0.55;
       white-space: nowrap;
     }
+  }
 
-    > .del {
-      position: absolute;
-      top: 6px;
-      right: 12px;
+  // muted layer: dim controls and clip
+  &.muted {
+    .layerControls {
+      opacity: 0.52;
+    }
+
+    .clip {
+      opacity: 0.38;
     }
   }
 
@@ -456,7 +591,7 @@ body[data-tool-move="0"] .clip {
 
   .nameWrapper {
     position: fixed;
-    margin-left: 12px;
+    margin-left: calc($controls-width + 12px);
     margin-top: 12px;
     width: 0;
     font-size: 0.75em;
@@ -496,6 +631,39 @@ body[data-tool-move="0"] .clip {
         inset 0 0 0 1px var(--layer-effect-tint),
         0 0 0 3px var(--layer-effect-glow),
         0 12px 28px rgba(0, 0, 0, 0.26);
+    }
+
+    .fadeHandle {
+      position: absolute;
+      top: 0;
+      width: 14px;
+      height: 14px;
+      z-index: 4;
+      cursor: ew-resize;
+    }
+
+    .fadeHandle::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(252, 217, 114, 0.95), rgba(252, 217, 114, 0.28));
+      box-shadow: 0 0 0 1px rgba(252, 217, 114, 0.82), 0 0 10px rgba(252, 217, 114, 0.2);
+    }
+
+    .fadeHandle.left::before {
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+
+    .fadeHandle.right::before {
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+    }
+
+    .fadeHandle.left { left: 0; }
+    .fadeHandle.right { right: 0; }
+
+    .fadeHandle:hover::before {
+      background: linear-gradient(135deg, rgba(252, 217, 114, 1), rgba(252, 217, 114, 0.42));
+      box-shadow: 0 0 0 1px rgba(252, 217, 114, 0.95), 0 0 14px rgba(252, 217, 114, 0.3);
     }
 
     .trimHandle {
@@ -560,9 +728,10 @@ body[data-tool-move="0"] .clip {
       }
     }
 
+    .fadeInfo,
     .trimInfo {
+      bottom: 4px;
       position: absolute;
-      top: 38%;
       z-index: 10;
       pointer-events: none;
 
@@ -579,13 +748,33 @@ body[data-tool-move="0"] .clip {
       display: none;
     }
 
-    .trimInfo.left {
-    left: -12px;
-    transform: translateX(-100%);
+    .fadeInfo {
+      top: 4px;
+      bottom: auto;
+      color: $clip-border-color;
+      background: rgba(0, 0, 0, 0.55);
+      border-color: $clip-border-color;
     }
+
+    .fadeInfo.left,
+    .trimInfo.left {
+      left: -12px;
+      transform: translateX(-100%);
+    }
+
+    .fadeInfo.right,
     .trimInfo.right {
       right: -12px;
       transform: translateX(100%);
+    }
+
+    .fadeSvg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
     }
   }
 
@@ -645,6 +834,8 @@ body[data-tool-move="0"] .clip {
 
   .fxList {
     display: flex;
+    gap: 6px;
+    align-items: stretch;
   }
 
   .fxBlock {
@@ -655,59 +846,104 @@ body[data-tool-move="0"] .clip {
     --fx-surface-strong: hsl(var(--fx-hue) 82% 60% / 0.24);
     --fx-glow: hsl(var(--fx-hue) 88% 67% / 0.42);
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: 5px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    align-content: start;
+    gap: 4px;
+    padding: 7px 9px 24px;
+    border-radius: 9px;
     font-size: 12px;
     line-height: 1;
     border: 1px solid var(--fx-border);
     background: linear-gradient(180deg, var(--fx-surface), rgba(255, 255, 255, 0.05));
     color: rgba(255, 255, 255, 0.9);
-    margin-left: 6px;
 
     .fxTitle {
       color: var(--fx-accent);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
     }
 
     &.paramFx,
     &.pitchFx {
       align-items: stretch;
-      min-width: 190px;
-      padding-bottom: 24px;
+    }
+
+    .fxHeader {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .fxMain {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fxValueSlot {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .fxValueGroup {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      padding: 4px 7px;
+      border-radius: 8px;
+      border: 1px solid hsl(var(--fx-hue) 70% 72% / 0.18);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     .fxBody {
       width: 100%;
+      display: flex;
+      align-items: flex-start;
+      min-height: 24px;
+    }
+
+    .fxBody:empty {
+      display: none;
     }
 
     .fxParamSlider,
     .fxPitchSlider {
       --range-thumb-bg: var(--fx-accent);
       --range-track-bg: hsl(var(--fx-hue) 26% 70% / 0.18);
+      --range-thumb-width: 1.05rem;
+      --range-thumb-height: 1.05rem;
+      --range-track-h: 0.48rem;
+      width: 100%;
+      margin: 0;
     }
 
-    .fxParamRow,
-    .fxPitchRow {
-      display: grid;
-      grid-template-columns: 1fr 3em auto;
-      gap: 6px;
-      align-items: center;
+    .fxValueInput {
+      width: auto;
+      min-width: 1ch;
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--fx-accent);
+      font-size: 0.95em;
+      font-weight: 700;
+      text-align: right;
+      field-sizing: content;
+      flex: 0 0 auto;
     }
 
-    .fxParamValue,
-    .fxPitchValue {
-      width: 3em;
-      min-width: 3em;
-    }
-
-    .fxParamSuffix,
-    .fxPitchSuffix {
+    .fxValueSuffix {
       font-size: 11px;
-      opacity: 0.7;
+      opacity: 0.9;
       white-space: nowrap;
+      color: var(--fx-accent);
     }
 
     &.active {
@@ -721,18 +957,13 @@ body[data-tool-move="0"] .clip {
     }
   }
 
-  .fxBtns {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-
     .fxSwitch {
       position: relative;
       display: inline-block;
-      width: 34px;
-      height: 18px;
+      width: 30px;
+      height: 16px;
       margin: 0;
+      flex: 0 0 auto;
     }
 
     .fxSwitch input {
@@ -754,8 +985,8 @@ body[data-tool-move="0"] .clip {
     .fxSlider::before {
       content: "";
       position: absolute;
-      height: 14px;
-      width: 14px;
+      height: 12px;
+      width: 12px;
       left: 1px;
       top: 50%;
       transform: translateY(-50%);
@@ -770,23 +1001,25 @@ body[data-tool-move="0"] .clip {
     }
 
     .fxSwitch input:checked + .fxSlider::before {
-      transform: translate(16px, -50%);
+      transform: translate(14px, -50%);
       background: var(--fx-accent);
     }
 
 
   .fxRemove {
     position: absolute;
-    bottom: 0;
     left: 0;
     right: 0;
+    bottom: 0;
+    display: grid;
+    place-items: center;
+    height: 18px;
     border: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.7);
     padding: 0 2px;
     cursor: pointer;
-    height: 20px;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 8px 8px;
 
     &:hover {
       background: $delete-color;
@@ -802,6 +1035,20 @@ body[data-tool-move="0"] .clip {
   width: 100%;
   height: 100%;
   pointer-events: auto;
+  z-index: 2;
+}
+
+.fadeFill {
+  fill: rgba(252, 217, 114, 0.12);
+}
+
+.fadeCurve {
+  fill: none;
+  stroke: rgba(252, 217, 114, 0.92);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  shape-rendering: geometricPrecision;
 }
 
 .autoCurve {

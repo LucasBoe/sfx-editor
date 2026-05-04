@@ -12,9 +12,14 @@ import {
   setClipPosition,
   trackWidthPx,
   clipDuration,
+  clipFadeDbAtSourceTime,
+  clipFadeInDuration,
+  clipFadeOutDuration,
+  clipFadeSourceDurations,
   clipSourceDuration,
   collectCrossTrackSnapPoints,
   layerPlaybackRate,
+  normalizeLayerFades,
   snapTimeToPoints,
 } from "./models/timeline.js";
 import {
@@ -27,6 +32,7 @@ import {
   setEffectBaseValue,
 } from "./models/effects.js";
 import { createTrimFeature } from "./features/trimFeature.js";
+import { createFadeFeature } from "./features/fadeFeature.js";
 import { createEffectsFeature } from "./features/effectsFeature.js";
 import { sampleCurve } from "./models/automation.js";
 
@@ -51,7 +57,7 @@ function applyLayerTint(layerEl, layer) {
   );
   layerEl.style.setProperty(
     "--layer-effect-line",
-    colorFromHue(theme.hue, 76, 62, theme.count ? 0.32 : 0.18)
+    colorFromHue(theme.hue, 76, 62, theme.count ? 0.5 : 0.3)
   );
   layerEl.style.setProperty(
     "--layer-effect-tint",
@@ -90,6 +96,14 @@ function mapFreqToY(freq, h) {
 
 function mapDbToY(db, h) {
   const t = (clampDb(Number(db) || 0) - DB_MIN) / Math.max(1e-9, DB_MAX - DB_MIN);
+  return (1 - t) * (h - 10) + 5;
+}
+
+function mapFadeDbToY(db, h) {
+  const min = -96;
+  const max = 0;
+  const clamped = Math.max(min, Math.min(max, Number(db) || min));
+  const t = (clamped - min) / Math.max(1e-9, max - min);
   return (1 - t) * (h - 10) + 5;
 }
 
@@ -151,6 +165,98 @@ function setConstantCurvePath(pathEl, clipW, y) {
   if (!pathEl) return;
   const yy = Number(y) || 0;
   pathEl.setAttribute("d", `M 0 ${yy} L ${clipW} ${yy}`);
+}
+
+function buildPathD(points) {
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+}
+
+function buildSmoothCurveCommands(points) {
+  if (!Array.isArray(points) || points.length < 2) return "";
+  if (points.length === 2) return `L ${points[1].x} ${points[1].y}`;
+
+  let d = "";
+  for (let i = 1; i < points.length - 1; i++) {
+    const current = points[i];
+    const next = points[i + 1];
+    const midX = (current.x + next.x) / 2;
+    const midY = (current.y + next.y) / 2;
+    d += ` Q ${current.x} ${current.y} ${midX} ${midY}`;
+  }
+
+  const penultimate = points[points.length - 2];
+  const last = points[points.length - 1];
+  d += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`;
+  return d.trim();
+}
+
+function buildSmoothPathD(points) {
+  if (!Array.isArray(points) || points.length === 0) return "";
+  if (points.length < 3) return buildPathD(points);
+  return `M ${points[0].x} ${points[0].y} ${buildSmoothCurveCommands(points)}`;
+}
+
+function drawFadeOverlay(svgEl, layer, clipW, clipH, pxPerSec) {
+  if (!svgEl) return;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const rate = layerPlaybackRate(layer);
+  const trimStart = Number(layer.trimStart) || 0;
+  const { fadeIn, fadeOut, srcDur } = clipFadeSourceDurations(layer);
+  const fadeOutStart = trimStart + Math.max(0, srcDur - fadeOut);
+
+  svgEl.setAttribute("viewBox", `0 0 ${clipW} ${clipH}`);
+  svgEl.innerHTML = "";
+
+  function appendFadePath(points) {
+    if (points.length < 2) return;
+
+    const area = document.createElementNS(ns, "path");
+    const line = document.createElementNS(ns, "path");
+    const pathD = buildSmoothPathD(points);
+    const areaCurveCommands = buildSmoothCurveCommands(points);
+    const areaD = `M ${points[0].x} ${clipH} L ${points[0].x} ${points[0].y} ${areaCurveCommands} L ${points[points.length - 1].x} ${clipH} Z`;
+
+    area.setAttribute("d", areaD);
+    area.setAttribute("class", "fadeFill");
+    line.setAttribute("d", pathD);
+    line.setAttribute("class", "fadeCurve");
+
+    svgEl.appendChild(area);
+    svgEl.appendChild(line);
+  }
+
+  if (fadeIn > 1e-4) {
+    const fadeInW = Math.max(1, (fadeIn / rate) * pxPerSec);
+    const samples = Math.max(24, Math.min(240, Math.ceil(fadeInW * 1.25)));
+    const points = [];
+    for (let i = 0; i < samples; i++) {
+      const u = samples === 1 ? 0 : i / (samples - 1);
+      const sourceTime = trimStart + fadeIn * u;
+      points.push({
+        x: u * fadeInW,
+        y: mapFadeDbToY(clipFadeDbAtSourceTime(layer, sourceTime), clipH),
+      });
+    }
+    appendFadePath(points);
+  }
+
+  if (fadeOut > 1e-4) {
+    const fadeOutW = Math.max(1, (fadeOut / rate) * pxPerSec);
+    const samples = Math.max(24, Math.min(240, Math.ceil(fadeOutW * 1.25)));
+    const points = [];
+    for (let i = 0; i < samples; i++) {
+      const u = samples === 1 ? 0 : i / (samples - 1);
+      const sourceTime = fadeOutStart + fadeOut * u;
+      points.push({
+        x: clipW - fadeOutW + u * fadeOutW,
+        y: mapFadeDbToY(clipFadeDbAtSourceTime(layer, sourceTime), clipH),
+      });
+    }
+    appendFadePath(points);
+  }
 }
 
 function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave, requestRender) {
@@ -349,6 +455,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
   layersEl.style.setProperty("--timeline-width", `${w}px`);
 
   const trim = createTrimFeature({ state, scheduleSave, requestRender });
+  const fade = createFadeFeature({ state, scheduleSave, requestRender });
   const fx = createEffectsFeature({ state, scheduleSave, requestRender });
 
 
@@ -360,13 +467,19 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const offsetEl = frag.querySelector(".offset");
     const volEl = frag.querySelector(".vol");
     const volDbEl = frag.querySelector(".volDb");
+    const muteEl = frag.querySelector(".mute");
     const clipEl = frag.querySelector(".clip");
     const delEl = frag.querySelector(".del");
     const canvasWrapperEl = frag.querySelector(".canvas-wrapper");
+    const fadeSvgEl = frag.querySelector(".fadeSvg");
     const autoSvgEl = frag.querySelector(".autoSvg");
 
+    const fadeInHandleEl = frag.querySelector(".fadeHandle.left");
+    const fadeOutHandleEl = frag.querySelector(".fadeHandle.right");
     const trimInEl = frag.querySelector(".trimInfo.left");
     const trimOutEl = frag.querySelector(".trimInfo.right");
+    const fadeInInfoEl = frag.querySelector(".fadeInfo.left");
+    const fadeOutInfoEl = frag.querySelector(".fadeInfo.right");
 
     const fxMenuEl = frag.querySelector(".fxMenu");
     const fxListEl = frag.querySelector(".fxList");
@@ -381,17 +494,31 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     applyLayerTint(layerEl, l);
     offsetEl.value = String(l.offset);
 
-    const db = gainToDb(l.gain.gain.value);
+    const intendedGain = l.muted ? (l.preMuteGain ?? 1) : l.gain.gain.value;
+    const db = gainToDb(intendedGain);
     volEl.value = String(Number.isFinite(db) ? clampDb(db) : DB_MIN);
     volDbEl.value = formatDb(db);
+
+    function applyMuteState() {
+      const isMuted = !!l.muted;
+      layerEl.classList.toggle("muted", isMuted);
+      muteEl.setAttribute("aria-pressed", String(isMuted));
+      muteEl.title = isMuted ? "Unmute layer" : "Mute layer";
+      muteEl.querySelector("span").className = isMuted ? "icon-volume-mute2" : "icon-volume-medium";
+    }
+    applyMuteState();
 
     const leftHandle = frag.querySelector(".trimHandle.left");
     const rightHandle = frag.querySelector(".trimHandle.right");
 
     function redrawClip() {
+      normalizeLayerFades(l);
+
       const rate = layerPlaybackRate(l);
       const srcDur = clipSourceDuration(l);
       const dur = clipDuration(l);
+      const fadeInDur = clipFadeInDuration(l);
+      const fadeOutDur = clipFadeOutDuration(l);
       const clipW = Math.max(30, Math.ceil(dur * state.pxPerSec));
 
       nameEl.textContent = `${l.name} (${dur.toFixed(2)}s)`;
@@ -422,6 +549,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       }
 
       scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
+      drawFadeOverlay(fadeSvgEl, l, clipW, clipH, state.pxPerSec);
       drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH, scheduleSave, requestRender);
 
       const trimOn = state.tools?.trim !== false;
@@ -430,9 +558,22 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
       const inSec = (Number(l.trimStart) || 0) / rate;
       const outSec = (Number(l.trimEnd) || 0) / rate;
+      const fadeHandleSize = 14;
+      const fadeInPx = fadeInDur * state.pxPerSec;
+      const fadeOutPx = fadeOutDur * state.pxPerSec;
 
       clipEl.classList.toggle("hasTrimStart", inSec > 0);
       clipEl.classList.toggle("hasTrimEnd", outSec > 0);
+      clipEl.classList.toggle("hasFadeIn", fadeInDur > 1e-4);
+      clipEl.classList.toggle("hasFadeOut", fadeOutDur > 1e-4);
+
+      if (fadeInHandleEl) {
+        fadeInHandleEl.style.left = `${Math.max(0, Math.min(clipW - fadeHandleSize, fadeInPx - fadeHandleSize * 0.7))}px`;
+      }
+
+      if (fadeOutHandleEl) {
+        fadeOutHandleEl.style.right = `${Math.max(0, Math.min(clipW - fadeHandleSize, fadeOutPx - fadeHandleSize * 0.7))}px`;
+      }
 
       if (trimInEl) {
         const t = fmtSec(inSec);
@@ -446,7 +587,28 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         trimOutEl.style.display = t ? "block" : "none";
       }
 
+      if (fadeInInfoEl) {
+        const t = fmtSec(fadeInDur);
+        fadeInInfoEl.textContent = t;
+        fadeInInfoEl.style.display = t ? "block" : "none";
+      }
+
+      if (fadeOutInfoEl) {
+        const t = fmtSec(fadeOutDur);
+        fadeOutInfoEl.textContent = t;
+        fadeOutInfoEl.style.display = t ? "block" : "none";
+      }
+
     }
+
+    tracksEl.appendChild(frag);
+
+    fade.attachFade({
+      layer: l,
+      leftHandle: fadeInHandleEl,
+      rightHandle: fadeOutHandleEl,
+      redrawClip,
+    });
 
     trim.attachTrim({
       layer: l,
@@ -487,11 +649,28 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     
     */
 
+    muteEl.addEventListener("click", () => {
+      l.muted = !l.muted;
+      if (l.muted) {
+        l.preMuteGain = l.gain.gain.value;
+        l.gain.gain.value = 0;
+      } else {
+        l.gain.gain.value = l.preMuteGain ?? dbToGain(clampDb(Number(volEl.value)));
+      }
+      applyMuteState();
+      scheduleSave();
+    });
+
     volEl.addEventListener("input", () => {
       const db = clampDb(Number(volEl.value));
-      l.gain.gain.value = dbToGain(db);
       volDbEl.value = formatDb(db);
-      scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
+      if (!l.muted) {
+        l.gain.gain.value = dbToGain(db);
+        scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
+      } else {
+        l.preMuteGain = dbToGain(db);
+        scaleCanvasY(canvasWrapperEl, dbToGain(db));
+      }
       scheduleSave();
     });
 
@@ -502,8 +681,13 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       volEl.value = String(Number.isFinite(db) ? db : DB_MIN);
       volDbEl.value = formatDb(db);
 
-      l.gain.gain.value = dbToGain(db);
-      scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
+      if (!l.muted) {
+        l.gain.gain.value = dbToGain(db);
+        scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
+      } else {
+        l.preMuteGain = dbToGain(db);
+        scaleCanvasY(canvasWrapperEl, dbToGain(db));
+      }
       scheduleSave();
     });
 
@@ -516,6 +700,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     clipEl.addEventListener("pointerdown", (e) => {
 
       if (!state.tools?.move) return;
+      if (e.target?.closest?.(".fadeHandle")) return;
       if (e.target?.closest?.(".trimHandle")) return;
       if (e.target?.closest?.(".autoSvg")) return;
 
@@ -574,7 +759,5 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         if (typeof requestRender === "function") requestRender();
       });
     }
-
-    tracksEl.appendChild(frag);
   }
 }

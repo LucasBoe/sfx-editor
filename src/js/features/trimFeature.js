@@ -3,6 +3,7 @@ import {
   clipStartTime,
   collectCrossTrackSnapPoints,
   layerPlaybackRate,
+  normalizeLayerFades,
   snapTimeToPoints,
 } from "../models/timeline.js";
 
@@ -49,6 +50,7 @@ export function createTrimFeature({ state, scheduleSave, requestRender }) {
 
         layer.offset = nextOffset;
         layer.trimStart = startTrim + dtTimeline * rate;
+        normalizeLayerFades(layer);
 
         redrawClip();
       };
@@ -99,6 +101,7 @@ export function createTrimFeature({ state, scheduleSave, requestRender }) {
         }
 
         layer.trimEnd = nextTrimEnd;
+        normalizeLayerFades(layer);
 
         redrawClip();
       };

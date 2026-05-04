@@ -47,6 +47,18 @@ function applyFxTheme(el, type) {
   el.style.setProperty("--fx-glow", effectColor(type, 88, 67, 0.42));
 }
 
+function formatSignedValue(value, decimals = 1) {
+  const n = Number(value) || 0;
+  return `${n >= 0 ? "+" : ""}${n.toFixed(decimals)}`;
+}
+
+function formatDbDisplay(db) {
+  const text = formatDb(db);
+  if (text === "-inf") return text;
+  const n = Number(text);
+  return Number.isFinite(n) && n > 0 ? `+${text}` : text;
+}
+
 export function createEffectsFeature({ state, scheduleSave, requestRender }) {
   function activeParamForFx(fx) {
     return effectPrimaryParam(fx);
@@ -62,11 +74,34 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
     }
   }
 
-  function renderPitchControls({ fx, bodyEl }) {
-    if (!bodyEl) return;
+  function createValueGroup({ inputClass, inputValue, suffixText }) {
+    const wrap = document.createElement("div");
+    wrap.className = "fxValueGroup";
 
-    const row = document.createElement("div");
-    row.className = "fxPitchRow";
+    const input = document.createElement("input");
+    input.className = inputClass;
+    input.type = "text";
+    input.value = inputValue;
+    syncValueInputSize(input);
+    input.addEventListener("input", () => syncValueInputSize(input));
+
+    const suffix = document.createElement("span");
+    suffix.className = "fxValueSuffix";
+    suffix.textContent = suffixText;
+
+    wrap.appendChild(input);
+    wrap.appendChild(suffix);
+    return { wrap, input };
+  }
+
+  function syncValueInputSize(input) {
+    if (!input) return;
+    const len = String(input.value ?? "").trim().length || 1;
+    input.size = Math.max(1, Math.ceil(len * 0.6));
+  }
+
+  function renderPitchControls({ fx, bodyEl, valueSlotEl }) {
+    if (!bodyEl || !valueSlotEl) return;
 
     const slider = document.createElement("input");
     slider.className = "fxPitchSlider form-range range-custom";
@@ -76,24 +111,24 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
     slider.step = "0.1";
     slider.value = String(clampPitchSemitones(fx.params?.semitones));
 
-    const value = document.createElement("input");
-    value.className = "fxPitchValue";
-    value.type = "text";
-    value.value = clampPitchSemitones(fx.params?.semitones).toFixed(1);
-
-    const suffix = document.createElement("span");
-    suffix.className = "fxPitchSuffix";
-    suffix.textContent = "st";
+    const { wrap, input: value } = createValueGroup({
+      inputClass: "fxPitchValue fxValueInput",
+      inputValue: formatSignedValue(clampPitchSemitones(fx.params?.semitones)),
+      suffixText: "st",
+    });
 
     const stop = (e) => e.stopPropagation();
     slider.addEventListener("pointerdown", stop);
     slider.addEventListener("click", stop);
+    wrap.addEventListener("pointerdown", stop);
+    wrap.addEventListener("click", stop);
     value.addEventListener("pointerdown", stop);
     value.addEventListener("click", stop);
 
     slider.addEventListener("input", () => {
       fx.params.semitones = clampPitchSemitones(Number(slider.value));
-      value.value = clampPitchSemitones(fx.params.semitones).toFixed(1);
+      value.value = formatSignedValue(clampPitchSemitones(fx.params.semitones));
+      syncValueInputSize(value);
       maybeRestartPlayback();
       scheduleSave?.();
     });
@@ -106,16 +141,15 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       const parsed = Number(String(value.value).trim().replace(",", "."));
       fx.params.semitones = clampPitchSemitones(Number.isFinite(parsed) ? parsed : 0);
       slider.value = String(fx.params.semitones);
-      value.value = clampPitchSemitones(fx.params.semitones).toFixed(1);
+      value.value = formatSignedValue(clampPitchSemitones(fx.params.semitones));
+      syncValueInputSize(value);
       maybeRestartPlayback();
       scheduleSave?.();
       requestRender?.();
     });
 
-    row.appendChild(slider);
-    row.appendChild(value);
-    row.appendChild(suffix);
-    bodyEl.appendChild(row);
+    valueSlotEl.appendChild(wrap);
+    bodyEl.appendChild(slider);
   }
 
   function shiftAutomationValues(fx, param, delta, clampValue) {
@@ -125,11 +159,8 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
     }
   }
 
-  function renderVolumeControls({ fx, bodyEl }) {
-    if (!bodyEl) return;
-
-    const row = document.createElement("div");
-    row.className = "fxParamRow";
+  function renderVolumeControls({ fx, bodyEl, valueSlotEl }) {
+    if (!bodyEl || !valueSlotEl) return;
 
     const slider = document.createElement("input");
     slider.className = "fxParamSlider form-range range-custom";
@@ -139,18 +170,17 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
     slider.step = "0.1";
     slider.value = String(clampEffectVolumeDb(fx.params?.db));
 
-    const value = document.createElement("input");
-    value.className = "fxParamValue";
-    value.type = "text";
-    value.value = formatDb(clampEffectVolumeDb(fx.params?.db));
-
-    const suffix = document.createElement("span");
-    suffix.className = "fxParamSuffix";
-    suffix.textContent = "dB";
+    const { wrap, input: value } = createValueGroup({
+      inputClass: "fxParamValue fxValueInput",
+      inputValue: formatDbDisplay(clampEffectVolumeDb(fx.params?.db)),
+      suffixText: "dB",
+    });
 
     const stop = (e) => e.stopPropagation();
     slider.addEventListener("pointerdown", stop);
     slider.addEventListener("click", stop);
+    wrap.addEventListener("pointerdown", stop);
+    wrap.addEventListener("click", stop);
     value.addEventListener("pointerdown", stop);
     value.addEventListener("click", stop);
 
@@ -161,7 +191,8 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       shiftAutomationValues(fx, "db", delta, clampDb);
 
       slider.value = String(clamped);
-      value.value = formatDb(clamped);
+      value.value = formatDbDisplay(clamped);
+      syncValueInputSize(value);
     }
 
     slider.addEventListener("input", () => {
@@ -182,10 +213,8 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       requestRender?.();
     });
 
-    row.appendChild(slider);
-    row.appendChild(value);
-    row.appendChild(suffix);
-    bodyEl.appendChild(row);
+    valueSlotEl.appendChild(wrap);
+    bodyEl.appendChild(slider);
   }
 
   function render({ layer, menuEl, listEl }) {
@@ -241,6 +270,7 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       const block = frag.querySelector(".fxBlock");
       const title = frag.querySelector(".fxTitle");
       const body = frag.querySelector(".fxBody");
+      const valueSlot = frag.querySelector(".fxValueSlot");
       const enabled = frag.querySelector(".fxEnabled");
       const remove = frag.querySelector(".fxRemove");
       const sw = frag.querySelector(".fxSwitch");
@@ -302,11 +332,11 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       });
 
       if (fx.type === "pitch") {
-        renderPitchControls({ fx, bodyEl: body });
+        renderPitchControls({ fx, bodyEl: body, valueSlotEl: valueSlot });
       }
 
       if (fx.type === "volume") {
-        renderVolumeControls({ fx, bodyEl: body });
+        renderVolumeControls({ fx, bodyEl: body, valueSlotEl: valueSlot });
       }
 
       listEl.appendChild(frag);

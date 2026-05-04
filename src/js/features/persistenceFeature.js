@@ -19,8 +19,11 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
           offset: l.offset,
           trimStart: l.trimStart,
           trimEnd: l.trimEnd,
+          fadeIn: l.fadeIn,
+          fadeOut: l.fadeOut,
           effects: l.effects ?? [],
-          gain: l.gain.gain.value,
+          gain: l.muted ? (l.preMuteGain ?? l.gain.gain.value) : l.gain.gain.value,
+          muted: l.muted ?? false,
           audio: l.audio,
         })),
       };
@@ -60,7 +63,9 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
       for (const item of project.layers ?? []) {
         const audio = item.audio;
         const buffer = await decodeAudio(state.ctx, audio.slice(0));
-        const gain = createGainToMaster(state, Number(item.gain ?? 1));
+        const intendedGain = Number(item.gain ?? 1);
+        const isMuted = !!item.muted;
+        const gain = createGainToMaster(state, isMuted ? 0 : intendedGain);
         state.layers.push({
           id: item.id || crypto.randomUUID(),
           name: item.name,
@@ -71,7 +76,11 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
           pitchSemitones: Number(item.pitchSemitones ?? 0),
           trimStart: Number(item.trimStart ?? 0),
           trimEnd: Number(item.trimEnd ?? 0),
+          fadeIn: Math.max(0, Number(item.fadeIn ?? 0) || 0),
+          fadeOut: Math.max(0, Number(item.fadeOut ?? 0) || 0),
           effects: Array.isArray(item.effects) ? item.effects : [],
+          muted: isMuted,
+          preMuteGain: isMuted ? intendedGain : undefined,
         });
       }
 

@@ -26,7 +26,10 @@ export function initImport({ state, dom, setLoading, ensureCtx, decodeAudio, cre
           offset: 0,
           trimStart: 0,
           trimEnd: 0,
+          fadeIn: 0,
+          fadeOut: 0,
           effects: [],
+          muted: false,
         });
       }
 

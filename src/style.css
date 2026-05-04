@@ -181,15 +181,17 @@ body[data-tool-move="0"] .clip {
   --range-thumb-height: 2rem;
   --range-track-bg: var(--bs-secondary-bg, #e9ecef);
   --range-thumb-bg: var(--bs-primary, #0d6efd);
+}
+.range-custom#zoom {
+  --range-thumb-bg: #6edff6 ;
+}
+.range-custom {
   -webkit-appearance: none;
   -moz-appearance: none;
        appearance: none;
   width: 100%;
   background: transparent;
   cursor: pointer;
-}
-.range-custom#zoom {
-  --range-thumb-bg: #6edff6 ;
 }
 
 .range-custom:focus {
@@ -299,13 +301,13 @@ body[data-tool-move="0"] .clip {
 
 .layer {
   --layer-effect-hue: 46;
-  --layer-effect-outline: hsl(46 90% 68%/0.88);
-  --layer-effect-line: hsl(46 76% 62%/0.18);
-  --layer-effect-tint: hsl(46 78% 60%/0.08);
-  --layer-effect-tint-strong: hsl(46 82% 62%/0.12);
-  --layer-effect-rack: hsl(46 72% 54%/0.09);
-  --layer-effect-wash: hsl(46 76% 60%/0.05);
-  --layer-effect-glow: hsl(46 90% 68%/0.16);
+  --layer-effect-outline: hsl(46 90% 68% / 0.88);
+  --layer-effect-line: hsl(46 76% 62% / 0.5);
+  --layer-effect-tint: hsl(46 78% 60% / 0.08);
+  --layer-effect-tint-strong: hsl(46 82% 62% / 0.12);
+  --layer-effect-rack: hsl(46 72% 54% / 0.09);
+  --layer-effect-wash: hsl(46 76% 60% / 0.05);
+  --layer-effect-glow: hsl(46 90% 68% / 0.16);
   align-items: start;
   gap: 12px;
   display: flex;
@@ -319,41 +321,140 @@ body[data-tool-move="0"] .clip {
 .layer .layerControls {
   position: fixed;
   left: 0;
-  z-index: 5;
+  z-index: 70;
   width: calc(max(16vw, 20vh) - 3px);
-  padding: 0 12px;
-  background: linear-gradient(135deg, var(--layer-effect-wash), rgba(0, 0, 0, 0.12) 70%);
-  border-right: 1px solid var(--layer-effect-line);
   height: 102px;
-  display: grid;
-  align-content: center;
-  gap: 6px;
+  background: linear-gradient(180deg, var(--layer-effect-rack), rgba(13, 28, 39, 0.3)), linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.28) 100%);
+  backdrop-filter: blur(4px);
+  border-left: 2px solid var(--layer-effect-outline);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 1px 0 0 var(--layer-effect-glow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 14px 10px 12px;
+  gap: 8px;
 }
 .layer .layerControls .small {
   display: none;
 }
+.layer .layerControls .controlsTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.layer .layerControls .layerBtn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s, color 0.14s;
+}
+.layer .layerControls .layerBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+.layer .layerControls .del {
+  color: rgba(220, 53, 69, 0.55);
+  border-color: rgba(220, 53, 69, 0.22);
+}
+.layer .layerControls .del:hover {
+  color: #ff5060;
+  border-color: rgba(220, 53, 69, 0.65);
+  background: rgba(220, 53, 69, 0.12);
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.22);
+}
+.layer .layerControls .del:active {
+  background: rgba(220, 53, 69, 0.22);
+  box-shadow: 0 0 14px rgba(220, 53, 69, 0.38);
+}
+.layer .layerControls .mute {
+  color: var(--layer-effect-outline);
+  border-color: var(--layer-effect-line);
+}
+.layer .layerControls .mute:hover {
+  border-color: var(--layer-effect-outline);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 0 8px var(--layer-effect-glow);
+}
+.layer .layerControls .mute[aria-pressed=true] {
+  color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+}
+.layer .layerControls .mute[aria-pressed=true]:hover {
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.22);
+}
 .layer .layerControls .volRow {
   display: grid;
-  grid-template-columns: 2.7rem 1fr 3em auto;
+  grid-template-columns: 2rem 1fr auto;
   gap: 8px;
   align-items: center;
 }
-.layer .layerControls input[type=range] {
-  width: 100%;
-}
 .layer .layerControls .volLabel {
-  font-size: 0.75em;
-  opacity: 0.78;
+  font-size: 0.68em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.52;
 }
-.layer .layerControls .dbSuffix {
-  font-size: 0.85em;
-  opacity: 0.7;
+.layer .layerControls .vol {
+  --range-thumb-bg: var(--layer-effect-outline);
+  --range-track-bg: rgba(255, 255, 255, 0.1);
+  --range-thumb-width: 13px;
+  --range-thumb-height: 13px;
+  --range-track-h: 3px;
+  min-width: 0;
+  margin: 0;
+}
+.layer .layerControls .volPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   white-space: nowrap;
 }
-.layer .layerControls > .del {
-  position: absolute;
-  top: 6px;
-  right: 12px;
+.layer .layerControls .volPill:focus-within {
+  border-color: var(--layer-effect-outline);
+  box-shadow: 0 0 0 2px var(--layer-effect-glow);
+}
+.layer .layerControls .volDb {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  width: 5ch;
+  padding: 0;
+  color: var(--layer-effect-outline);
+  font-size: 0.8em;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.layer .layerControls .dbSuffix {
+  font-size: 0.68em;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+.layer.muted .layerControls {
+  opacity: 0.52;
+}
+.layer.muted .clip {
+  opacity: 0.38;
 }
 .layer .track {
   position: relative;
@@ -365,7 +466,7 @@ body[data-tool-move="0"] .clip {
 }
 .layer .nameWrapper {
   position: fixed;
-  margin-left: 12px;
+  margin-left: calc(max(16vw, 20vh) - 3px + 12px);
   margin-top: 12px;
   width: 0;
   font-size: 0.75em;
@@ -390,30 +491,41 @@ body[data-tool-move="0"] .clip {
      -moz-user-select: none;
           user-select: none;
   touch-action: none;
-  /*
-
-  &.hasTrimStart::before,
-  &.hasTrimEnd::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 20px;
-    z-index: 1;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.16),
-      rgba(255, 255, 255, 0.16) 4px,
-      rgba(0, 0, 0, 0) 4px,
-      rgba(0, 0, 0, 0) 8px
-    );
-  }
-    */
 }
 .layer .clip.dragging {
   cursor: grabbing;
   box-shadow: inset 0 0 0 1px var(--layer-effect-tint), 0 0 0 3px var(--layer-effect-glow), 0 12px 28px rgba(0, 0, 0, 0.26);
+}
+.layer .clip .fadeHandle {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  z-index: 4;
+  cursor: ew-resize;
+}
+.layer .clip .fadeHandle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(252, 217, 114, 0.95), rgba(252, 217, 114, 0.28));
+  box-shadow: 0 0 0 1px rgba(252, 217, 114, 0.82), 0 0 10px rgba(252, 217, 114, 0.2);
+}
+.layer .clip .fadeHandle.left::before {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.layer .clip .fadeHandle.right::before {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.layer .clip .fadeHandle.left {
+  left: 0;
+}
+.layer .clip .fadeHandle.right {
+  right: 0;
+}
+.layer .clip .fadeHandle:hover::before {
+  background: linear-gradient(135deg, rgb(252, 217, 114), rgba(252, 217, 114, 0.42));
+  box-shadow: 0 0 0 1px rgba(252, 217, 114, 0.95), 0 0 14px rgba(252, 217, 114, 0.3);
 }
 .layer .clip .trimHandle {
   position: absolute;
@@ -440,6 +552,28 @@ body[data-tool-move="0"] .clip {
   background: rgba(255, 255, 255, 0.35);
   border-radius: 2px;
 }
+.layer .clip {
+  /*
+
+  &.hasTrimStart::before,
+  &.hasTrimEnd::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.16) 4px,
+      rgba(0, 0, 0, 0) 4px,
+      rgba(0, 0, 0, 0) 8px
+    );
+  }
+    */
+}
 .layer .clip.hasTrimStart {
   box-shadow: -3px 0px 0px 1.5px #fc72bc;
 }
@@ -455,9 +589,10 @@ body[data-tool-move="0"] .clip {
 .layer .clip.hasTrimEnd.hasTrimStart {
   box-shadow: -3px 0px 0px 1.5px #fc72bc, 3px 0px 0px 1.5px #fc72bc;
 }
+.layer .clip .fadeInfo,
 .layer .clip .trimInfo {
+  bottom: 4px;
   position: absolute;
-  top: 38%;
   z-index: 10;
   pointer-events: none;
   font-size: 11px;
@@ -470,13 +605,30 @@ body[data-tool-move="0"] .clip {
   border: 1px solid #fc72bc;
   display: none;
 }
+.layer .clip .fadeInfo {
+  top: 4px;
+  bottom: auto;
+  color: #fcd972;
+  background: rgba(0, 0, 0, 0.55);
+  border-color: #fcd972;
+}
+.layer .clip .fadeInfo.left,
 .layer .clip .trimInfo.left {
   left: -12px;
   transform: translateX(-100%);
 }
+.layer .clip .fadeInfo.right,
 .layer .clip .trimInfo.right {
   right: -12px;
   transform: translateX(100%);
+}
+.layer .clip .fadeSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 .layer .wave {
   height: 100%;
@@ -500,8 +652,7 @@ body[data-tool-move="0"] .clip {
   height: 102px;
   padding: 6px;
   background: linear-gradient(180deg, var(--layer-effect-rack), rgba(13, 28, 39, 0.22));
-  -webkit-backdrop-filter: blur(4px);
-          backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   border-left: 1px solid var(--layer-effect-line);
 }
 .layer .dropdown-menu {
@@ -522,62 +673,104 @@ body[data-tool-move="0"] .clip {
 }
 .layer .fxList {
   display: flex;
+  gap: 6px;
+  align-items: stretch;
 }
 .layer .fxBlock {
   --fx-hue: var(--layer-effect-hue);
-  --fx-accent: hsl(var(--fx-hue) 88% 67%/0.96);
-  --fx-border: hsl(var(--fx-hue) 88% 67%/0.86);
-  --fx-surface: hsl(var(--fx-hue) 78% 58%/0.12);
-  --fx-surface-strong: hsl(var(--fx-hue) 82% 60%/0.24);
-  --fx-glow: hsl(var(--fx-hue) 88% 67%/0.42);
+  --fx-accent: hsl(var(--fx-hue) 88% 67% / 0.96);
+  --fx-border: hsl(var(--fx-hue) 88% 67% / 0.86);
+  --fx-surface: hsl(var(--fx-hue) 78% 58% / 0.12);
+  --fx-surface-strong: hsl(var(--fx-hue) 82% 60% / 0.24);
+  --fx-glow: hsl(var(--fx-hue) 88% 67% / 0.42);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 5px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  gap: 4px;
+  padding: 7px 9px 24px;
+  border-radius: 9px;
   font-size: 12px;
   line-height: 1;
   border: 1px solid var(--fx-border);
   background: linear-gradient(180deg, var(--fx-surface), rgba(255, 255, 255, 0.05));
   color: rgba(255, 255, 255, 0.9);
-  margin-left: 6px;
 }
 .layer .fxBlock .fxTitle {
   color: var(--fx-accent);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
-.layer .fxBlock.paramFx,
-.layer .fxBlock.pitchFx {
+.layer .fxBlock.paramFx, .layer .fxBlock.pitchFx {
   align-items: stretch;
-  min-width: 190px;
-  padding-bottom: 24px;
 }
-.layer .fxBody {
-  width: 100%;
-}
-.layer .fxParamSlider,
-.layer .fxPitchSlider {
-  --range-thumb-bg: var(--fx-accent);
-  --range-track-bg: hsl(var(--fx-hue) 26% 70%/0.18);
-}
-.layer .fxParamRow,
-.layer .fxPitchRow {
+.layer .fxBlock .fxHeader {
   display: grid;
-  grid-template-columns: 1fr 3em auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   align-items: center;
 }
-.layer .fxParamValue,
-.layer .fxPitchValue {
-  width: 3em;
-  min-width: 3em;
+.layer .fxBlock .fxMain {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.layer .fxParamSuffix,
-.layer .fxPitchSuffix {
+.layer .fxBlock .fxValueSlot {
+  display: flex;
+  justify-content: flex-end;
+}
+.layer .fxBlock .fxValueGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 7px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--fx-hue), 70%, 72%, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.layer .fxBlock .fxBody {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  min-height: 24px;
+}
+.layer .fxBlock .fxBody:empty {
+  display: none;
+}
+.layer .fxBlock .fxParamSlider,
+.layer .fxBlock .fxPitchSlider {
+  --range-thumb-bg: var(--fx-accent);
+  --range-track-bg: hsl(var(--fx-hue) 26% 70% / 0.18);
+  --range-thumb-width: 1.05rem;
+  --range-thumb-height: 1.05rem;
+  --range-track-h: 0.48rem;
+  width: 100%;
+  margin: 0;
+}
+.layer .fxBlock .fxValueInput {
+  width: auto;
+  min-width: 1ch;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--fx-accent);
+  font-size: 0.95em;
+  font-weight: 700;
+  text-align: right;
+  field-sizing: content;
+  flex: 0 0 auto;
+}
+.layer .fxBlock .fxValueSuffix {
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.9;
   white-space: nowrap;
+  color: var(--fx-accent);
 }
 .layer .fxBlock.active {
   background: linear-gradient(180deg, var(--fx-surface-strong), rgba(255, 255, 255, 0.08));
@@ -587,17 +780,13 @@ body[data-tool-move="0"] .clip {
   opacity: 0.55;
   border-style: dashed;
 }
-.layer .fxBtns {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
 .layer .fxSwitch {
   position: relative;
   display: inline-block;
-  width: 34px;
-  height: 18px;
+  width: 30px;
+  height: 16px;
   margin: 0;
+  flex: 0 0 auto;
 }
 .layer .fxSwitch input {
   opacity: 0;
@@ -609,15 +798,15 @@ body[data-tool-move="0"] .clip {
   inset: 0;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.18);
-  border: 1px solid hsl(var(--fx-hue) 88% 67%/0.55);
+  border: 1px solid hsl(var(--fx-hue), 88%, 67%, 0.55);
   border-radius: 999px;
   transition: 0.15s;
 }
 .layer .fxSlider::before {
   content: "";
   position: absolute;
-  height: 14px;
-  width: 14px;
+  height: 12px;
+  width: 12px;
   left: 1px;
   top: 50%;
   transform: translateY(-50%);
@@ -626,25 +815,27 @@ body[data-tool-move="0"] .clip {
   transition: 0.15s;
 }
 .layer .fxSwitch input:checked + .fxSlider {
-  background: hsl(var(--fx-hue) 88% 60%/0.22);
+  background: hsl(var(--fx-hue), 88%, 60%, 0.22);
   border-color: var(--fx-border);
 }
 .layer .fxSwitch input:checked + .fxSlider::before {
-  transform: translate(16px, -50%);
+  transform: translate(14px, -50%);
   background: var(--fx-accent);
 }
 .layer .fxRemove {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  height: 18px;
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
   padding: 0 2px;
   cursor: pointer;
-  height: 20px;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 8px 8px;
 }
 .layer .fxRemove:hover {
   background: #dc3545;
@@ -658,6 +849,20 @@ body[data-tool-move="0"] .clip {
   width: 100%;
   height: 100%;
   pointer-events: auto;
+  z-index: 2;
+}
+
+.fadeFill {
+  fill: rgba(252, 217, 114, 0.12);
+}
+
+.fadeCurve {
+  fill: none;
+  stroke: rgba(252, 217, 114, 0.92);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  shape-rendering: geometricPrecision;
 }
 
 .autoCurve {
@@ -695,8 +900,7 @@ body[data-tool-move="0"] .clip {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 24, 0.5);
-  -webkit-backdrop-filter: blur(3px);
-          backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   z-index: 9999;
 }
 .loading.hidden {

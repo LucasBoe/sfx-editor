@@ -58,7 +58,7 @@ state.startPlayback = () => startPlayback(state);
 state.stopPlayback = () => stopPlayback(state);
 
 function renderAll() {
-  const w = trackWidthPx(state.layers, state.pxPerSec);
+  const w = trackWidthPx(state);
   dom.layersEl.style.setProperty("--timeline-width", `${w}px`);
 
   renderLayersUI({
@@ -70,11 +70,11 @@ function renderAll() {
   });
 
   updatePlayheadPosition(state);
-  ruler.renderRuler();;
+  ruler.renderRuler();
 
   requestAnimationFrame(() => {
     updatePlayheadPosition(state);
-    ruler.renderRuler();;
+    ruler.renderRuler();
   });
 }
 
@@ -106,7 +106,7 @@ function seekToTime(t, restartIfPlaying) {
 
   stopPlayback(state);
   state.setPlayheadTimeValue(t);
-  ruler.renderRuler();;
+  ruler.renderRuler();
   scheduleSave();
 
   if (restartIfPlaying && wasPlaying) {

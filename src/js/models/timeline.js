@@ -15,9 +15,15 @@ export function projectDuration(layers) {
   return max;
 }
 
-export function trackWidthPx(state) {
-  const pxPerSec = Number(state?.pxPerSec) || 0;
-  const dur = projectDuration(state?.layers);
+export function trackWidthPx(stateOrLayers, pxPerSecValue) {
+  const hasState =
+    !!stateOrLayers &&
+    !Array.isArray(stateOrLayers) &&
+    typeof stateOrLayers === "object";
+
+  const layers = hasState ? stateOrLayers.layers : stateOrLayers;
+  const pxPerSec = Number(hasState ? stateOrLayers.pxPerSec : pxPerSecValue) || 0;
+  const dur = projectDuration(layers);
   return Math.max(300, Math.ceil(dur * pxPerSec) + 120);
 }
 

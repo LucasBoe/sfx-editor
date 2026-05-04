@@ -160,6 +160,10 @@ export async function renderMixdownWav(state, masterGainValue) {
   master.connect(offline.destination);
 
   for (const l of state.layers) {
+    const in0 = Number(l.trimStart) || 0;
+    const dur = clipDuration(l);
+    if (dur <= 0.0001) continue;
+
     const src = offline.createBufferSource();
     src.buffer = l.buffer;
 
@@ -175,10 +179,6 @@ export async function renderMixdownWav(state, masterGainValue) {
     );
 
     g.connect(master);
-    const in0 = Number(l.trimStart) || 0;
-    const dur = clipDuration(l);
-    if (dur <= 0.0001) continue;
-
     src.start(l.offset, in0, dur);
   }
 

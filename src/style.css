@@ -127,7 +127,7 @@ body[data-tool-move="0"] .clip {
 .zoom .btn {
   --bs-btn-color: #6edff6;
   --bs-btn-border-color: #6edff6;
-  --bs-btn-hover-color: {$backdrop-color};
+  --bs-btn-hover-color: #0d1c27;
 }
 .zoom .btn:hover {
   color: #0d1c27;
@@ -275,6 +275,13 @@ body[data-tool-move="0"] .clip {
   align-content: center;
 }
 
+#tracks {
+  display: grid;
+  gap: 6px;
+  width: calc(var(--controls-width) + var(--timeline-width));
+  min-width: calc(var(--controls-width) + 300px);
+}
+
 #rulerViewport {
   width: 100%;
   flex: 1 1 auto;
@@ -319,7 +326,10 @@ body[data-tool-move="0"] .clip {
 .layer .track {
   position: relative;
   height: 102px;
-  left: calc(max(16vw, 20vh) - 3px);
+  width: var(--timeline-width);
+  min-width: var(--timeline-width);
+  margin-left: var(--controls-width);
+  flex: 0 0 var(--timeline-width);
 }
 .layer .nameWrapper {
   position: fixed;

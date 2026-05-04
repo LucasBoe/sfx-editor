@@ -200,7 +200,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
   tracksEl.innerHTML = "";
 
-  const w = trackWidthPx(state.layers, state.pxPerSec);
+  const w = trackWidthPx(state);
   layersEl.style.setProperty("--timeline-width", `${w}px`);
 
   const trim = createTrimFeature({ state, scheduleSave });
@@ -232,7 +232,6 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     }
 
     fx.render({ layer: l, menuEl: fxMenuEl, listEl: fxListEl });
-    console.log("fx menu items", fxMenuEl.children.length);
 
     nameEl.textContent = `${l.name} (${l.buffer.duration.toFixed(2)}s)`;
     offsetEl.value = String(l.offset);
@@ -271,7 +270,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       }
 
       scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
-      drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH);
+      drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH, scheduleSave);
 
       const trimOn = state.tools?.trim !== false;
       if (leftHandle) leftHandle.style.display = trimOn ? "" : "none";
@@ -304,7 +303,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       redrawClip,
     });
 
-    redrawClip()
+    redrawClip();
 
     /*
     if (waveContainerEl) {

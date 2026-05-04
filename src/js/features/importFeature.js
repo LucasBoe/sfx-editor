@@ -1,5 +1,9 @@
 import { dbToGain } from "../volume.js";
 
+function createLayerId() {
+  return (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).toString();
+}
+
 export function initImport({ state, dom, setLoading, ensureCtx, decodeAudio, createGainToMaster, renderAll, scheduleSave }) {
   dom.filesEl.addEventListener("change", async (e) => {
     const files = Array.from(e.target.files || []);
@@ -14,6 +18,7 @@ export function initImport({ state, dom, setLoading, ensureCtx, decodeAudio, cre
         const buffer = await decodeAudio(state.ctx, audio.slice(0));
         const gain = createGainToMaster(state, 1);
         state.layers.push({
+          id: createLayerId(),
           name: f.name,
           buffer,
           audio,

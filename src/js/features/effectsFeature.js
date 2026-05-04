@@ -2,17 +2,21 @@ import {
   EFFECT_DEFS,
   UNIQUE_EFFECT_TYPES,
   createEffect,
+  clampEffectVolumeDb,
   effectColor,
   effectHue,
+  effectPrimaryParam,
+  ensureEffectAutomation,
   ensureEffects,
   getEffectDef,
+  setEffectBaseValue,
 } from "../models/effects.js";
-import { ensureDefaultCurve } from "../models/automation.js";
 import {
   PITCH_MAX_SEMITONES,
   PITCH_MIN_SEMITONES,
   clampPitchSemitones,
 } from "../models/timeline.js";
+import { DB_MIN, DB_MAX, clampDb, formatDb, parseDb } from "../volume.js";
 
 function labelFor(type) {
   return getEffectDef(type)?.label ?? type;
@@ -45,7 +49,7 @@ function applyFxTheme(el, type) {
 
 export function createEffectsFeature({ state, scheduleSave, requestRender }) {
   function activeParamForFx(fx) {
-    return fx.type === "pitch" ? null : "freq";
+    return effectPrimaryParam(fx);
   }
 
   function maybeRestartPlayback() {
@@ -114,6 +118,76 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
     bodyEl.appendChild(row);
   }
 
+  function shiftAutomationValues(fx, param, delta, clampValue) {
+    if (!fx?.automation?.[param] || !Number.isFinite(delta) || Math.abs(delta) <= 1e-9) return;
+    for (const key of fx.automation[param]) {
+      key.v = clampValue(key.v + delta);
+    }
+  }
+
+  function renderVolumeControls({ fx, bodyEl }) {
+    if (!bodyEl) return;
+
+    const row = document.createElement("div");
+    row.className = "fxParamRow";
+
+    const slider = document.createElement("input");
+    slider.className = "fxParamSlider form-range range-custom";
+    slider.type = "range";
+    slider.min = String(DB_MIN);
+    slider.max = String(DB_MAX);
+    slider.step = "0.1";
+    slider.value = String(clampEffectVolumeDb(fx.params?.db));
+
+    const value = document.createElement("input");
+    value.className = "fxParamValue";
+    value.type = "text";
+    value.value = formatDb(clampEffectVolumeDb(fx.params?.db));
+
+    const suffix = document.createElement("span");
+    suffix.className = "fxParamSuffix";
+    suffix.textContent = "dB";
+
+    const stop = (e) => e.stopPropagation();
+    slider.addEventListener("pointerdown", stop);
+    slider.addEventListener("click", stop);
+    value.addEventListener("pointerdown", stop);
+    value.addEventListener("click", stop);
+
+    function applyVolume(nextDb) {
+      const prevDb = clampEffectVolumeDb(fx.params?.db);
+      const clamped = setEffectBaseValue(fx, nextDb);
+      const delta = clamped - prevDb;
+      shiftAutomationValues(fx, "db", delta, clampDb);
+
+      slider.value = String(clamped);
+      value.value = formatDb(clamped);
+    }
+
+    slider.addEventListener("input", () => {
+      applyVolume(Number(slider.value));
+      maybeRestartPlayback();
+      scheduleSave?.();
+    });
+
+    slider.addEventListener("change", () => {
+      requestRender?.();
+    });
+
+    value.addEventListener("change", () => {
+      const parsed = parseDb(value.value);
+      applyVolume(Number.isFinite(parsed) ? parsed : DB_MIN);
+      maybeRestartPlayback();
+      scheduleSave?.();
+      requestRender?.();
+    });
+
+    row.appendChild(slider);
+    row.appendChild(value);
+    row.appendChild(suffix);
+    bodyEl.appendChild(row);
+  }
+
   function render({ layer, menuEl, listEl }) {
     ensureEffects(layer);
 
@@ -139,10 +213,11 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
           fx = createEffect(def.type);
           fx.enabled = true;
 
-          if (fx.type !== "pitch") {
-            const dur = Number(layer.buffer?.duration) || 0;
-            fx.automation ||= {};
-            fx.automation.freq = ensureDefaultCurve(fx.automation.freq, dur / 2, fx.params.freq);
+          if (effectPrimaryParam(fx)) {
+            ensureEffectAutomation(
+              fx,
+              Number(layer.buffer?.duration) || 0
+            );
           }
 
           layer.effects.push(fx);
@@ -174,6 +249,7 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
       title.textContent = labelFor(fx.type);
       applyFxTheme(block, fx.type);
       block.classList.toggle("pitchFx", fx.type === "pitch");
+      block.classList.toggle("paramFx", fx.type === "pitch" || fx.type === "volume");
 
       block.classList.toggle("active", isActive(state, layer, fx));
       block.classList.toggle("disabled", fx.enabled === false);
@@ -227,6 +303,10 @@ export function createEffectsFeature({ state, scheduleSave, requestRender }) {
 
       if (fx.type === "pitch") {
         renderPitchControls({ fx, bodyEl: body });
+      }
+
+      if (fx.type === "volume") {
+        renderVolumeControls({ fx, bodyEl: body });
       }
 
       listEl.appendChild(frag);

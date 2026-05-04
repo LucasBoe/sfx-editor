@@ -1,13 +1,15 @@
-import { ensureDefaultCurve, sampleCurve } from "./automation.js";
+import { sampleCurve } from "./automation.js";
 import { clampPitchSemitones } from "./timeline.js";
+import { clampDb, dbToGain } from "../volume.js";
 
 export const EFFECT_DEFS = [
   { type: "pitch", label: "Pitch", hue: 215, defaults: { semitones: 0 } },
+  { type: "volume", label: "Volume", hue: 24, defaults: { db: 0 } },
   { type: "lowpass", label: "Lowpass", hue: 168, defaults: { freq: 12000, q: 0.7 } },
   { type: "highpass", label: "Highpass", hue: 144, defaults: { freq: 80, q: 0.7 } },
 ];
 
-export const UNIQUE_EFFECT_TYPES = new Set(["pitch"]);
+export const UNIQUE_EFFECT_TYPES = new Set(["pitch", "volume"]);
 export const DEFAULT_TRACK_HUE = 46;
 
 export function getEffectDef(type) {
@@ -28,6 +30,89 @@ export function effectHue(type) {
 
 export function effectColor(type, saturation = 88, lightness = 64, alpha = 1) {
   return colorFromHue(effectHue(type), saturation, lightness, alpha);
+}
+
+export function effectPrimaryParam(typeOrFx) {
+  const type = typeof typeOrFx === "string" ? typeOrFx : typeOrFx?.type;
+  if (type === "lowpass" || type === "highpass") return "freq";
+  if (type === "volume") return "db";
+  return null;
+}
+
+export function clampEffectVolumeDb(db) {
+  const n = Number(db);
+  return clampDb(Number.isFinite(n) ? n : 0);
+}
+
+function clampEffectFreq(freq, fallback) {
+  const n = Number(freq);
+  const safe = Number.isFinite(n) ? n : fallback;
+  return Math.max(20, Math.min(20000, safe));
+}
+
+export function setEffectBaseValue(fx, value) {
+  if (!fx) return 0;
+
+  fx.params ||= {};
+
+  if (fx.type === "lowpass") {
+    fx.params.freq = clampEffectFreq(value, 12000);
+    return fx.params.freq;
+  }
+
+  if (fx.type === "highpass") {
+    fx.params.freq = clampEffectFreq(value, 80);
+    return fx.params.freq;
+  }
+
+  if (fx.type === "volume") {
+    fx.params.db = clampEffectVolumeDb(value);
+    return fx.params.db;
+  }
+
+  if (fx.type === "pitch") {
+    fx.params.semitones = clampPitchSemitones(value);
+    return fx.params.semitones;
+  }
+
+  return Number(value) || 0;
+}
+
+export function effectBaseValue(fx) {
+  if (!fx) return 0;
+
+  if (fx.type === "lowpass") return Number(fx.params?.freq) || 12000;
+  if (fx.type === "highpass") return Number(fx.params?.freq) || 80;
+  if (fx.type === "volume") return clampEffectVolumeDb(fx.params?.db);
+  if (fx.type === "pitch") return clampPitchSemitones(fx.params?.semitones);
+
+  return 0;
+}
+
+export function ensureEffectAutomation(fx, bufferDuration = 0) {
+  if (!fx) return null;
+
+  fx.automation ||= {};
+
+  const param = effectPrimaryParam(fx);
+  if (!param) return null;
+
+  const rawKeys = Array.isArray(fx.automation[param]) ? fx.automation[param] : [];
+
+  if (rawKeys.length === 1) {
+    setEffectBaseValue(fx, rawKeys[0]?.v);
+    fx.automation[param] = [];
+  } else {
+    fx.automation[param] = rawKeys;
+  }
+
+  const fallback = effectBaseValue(fx);
+
+  return {
+    param,
+    keys: fx.automation[param],
+    fallback,
+  };
 }
 
 function averageHues(hues) {
@@ -90,6 +175,9 @@ export function ensureEffects(layer) {
     if (fx.type === "pitch") {
       fx.params.semitones = clampPitchSemitones(fx.params.semitones);
     }
+    if (fx.type === "volume") {
+      fx.params.db = clampEffectVolumeDb(fx.params.db);
+    }
   }
   return layer.effects;
 }
@@ -104,7 +192,16 @@ export function createEffect(type) {
   return { id: uid(), type: def.type, params: { ...def.defaults }, automation: {} };
 }
 
-function scheduleAudioParam(param, keys, absStartTime, srcStart, srcEnd, fallback, playbackRate = 1) {
+function scheduleAudioParam(
+  param,
+  keys,
+  absStartTime,
+  srcStart,
+  srcEnd,
+  fallback,
+  playbackRate = 1,
+  mapValue = (v) => v
+) {
   const span = srcEnd - srcStart;
   if (span <= 1e-6) return;
   const rate = Math.max(1e-6, Number(playbackRate) || 1);
@@ -114,6 +211,9 @@ function scheduleAudioParam(param, keys, absStartTime, srcStart, srcEnd, fallbac
   param.cancelScheduledValues(absStartTime);
 
   const curve = sampleCurve(keys, srcStart, srcEnd, samples, fallback);
+  for (let i = 0; i < curve.length; i++) {
+    curve[i] = Number(mapValue(curve[i])) || 0;
+  }
   param.setValueCurveAtTime(curve, absStartTime, timelineSpan);
 }
 
@@ -126,13 +226,40 @@ export function connectSourceThroughEffects(ctx, source, layer, destination, pla
 
     if (fx.enabled === false) continue;
 
+    if (fx.type === "volume") {
+      const g = ctx.createGain();
+      const baseDb = effectBaseValue(fx);
+      g.gain.value = dbToGain(baseDb);
+
+      node.connect(g);
+      node = g;
+
+      if (play) {
+        const automation = ensureEffectAutomation(
+          fx,
+          Number(layer.buffer?.duration) || 0
+        );
+
+        if (automation) {
+          scheduleAudioParam(
+            g.gain,
+            automation.keys,
+            play.absStartTime,
+            play.srcStart,
+            play.srcEnd,
+            automation.fallback,
+            play.playbackRate,
+            dbToGain
+          );
+        }
+      }
+    }
+
     if (fx.type === "lowpass" || fx.type === "highpass") {
       const f = ctx.createBiquadFilter();
       f.type = fx.type;
 
-      const baseFreq =
-        Number(fx.params?.freq) ||
-        (fx.type === "lowpass" ? 12000 : 80);
+      const baseFreq = effectBaseValue(fx);
 
       f.frequency.value = baseFreq;
       f.Q.value = Number(fx.params?.q ?? 0.7);
@@ -141,23 +268,22 @@ export function connectSourceThroughEffects(ctx, source, layer, destination, pla
       node = f;
 
       if (play) {
-        const bufDur = Number(layer.buffer?.duration) || 0;
-
-        fx.automation.freq = ensureDefaultCurve(
-          fx.automation.freq,
-          bufDur / 2,
-          baseFreq
+        const automation = ensureEffectAutomation(
+          fx,
+          Number(layer.buffer?.duration) || 0
         );
 
-        scheduleAudioParam(
-          f.frequency,
-          fx.automation.freq,
-          play.absStartTime,
-          play.srcStart,
-          play.srcEnd,
-          baseFreq,
-          play.playbackRate
-        );
+        if (automation) {
+          scheduleAudioParam(
+            f.frequency,
+            automation.keys,
+            play.absStartTime,
+            play.srcStart,
+            play.srcEnd,
+            automation.fallback,
+            play.playbackRate
+          );
+        }
       }
     }
   }

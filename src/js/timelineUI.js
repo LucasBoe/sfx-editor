@@ -1,4 +1,12 @@
-import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
+import {
+  dbToGain,
+  gainToDb,
+  formatDb,
+  parseDb,
+  clampDb,
+  DB_MIN,
+  DB_MAX,
+} from "./volume.js";
 import { setCanvasSize, scaleCanvasY } from "./canvasFit.js";
 import {
   setClipPosition,
@@ -11,12 +19,16 @@ import {
 } from "./models/timeline.js";
 import {
   colorFromHue,
+  effectBaseValue,
   effectColor,
+  effectPrimaryParam,
+  ensureEffectAutomation,
   layerEffectTheme,
+  setEffectBaseValue,
 } from "./models/effects.js";
 import { createTrimFeature } from "./features/trimFeature.js";
 import { createEffectsFeature } from "./features/effectsFeature.js";
-import { sampleCurve, ensureDefaultCurve } from "./models/automation.js";
+import { sampleCurve } from "./models/automation.js";
 
 function fmtSec(s) {
   const n = Number(s) || 0;
@@ -76,6 +88,11 @@ function mapFreqToY(freq, h) {
   return (1 - t) * (h - 10) + 5;
 }
 
+function mapDbToY(db, h) {
+  const t = (clampDb(Number(db) || 0) - DB_MIN) / Math.max(1e-9, DB_MAX - DB_MIN);
+  return (1 - t) * (h - 10) + 5;
+}
+
 function isActiveFx(state, layer, fx, param) {
   const a = state.activeFx;
   return !!a && a.layerId === layer.id && a.fxId === fx.id && a.param === param;
@@ -96,7 +113,47 @@ function yToFreq(y, h) {
   return Math.exp(a + t * (b - a));
 }
 
-function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave) {
+function yToDb(y, h) {
+  const t = 1 - Math.max(0, Math.min(1, (y - 5) / Math.max(1e-9, (h - 10))));
+  return clampDb(DB_MIN + t * (DB_MAX - DB_MIN));
+}
+
+function mapAutomationValueToY(param, value, h) {
+  if (param === "freq") return mapFreqToY(value, h);
+  if (param === "db") return mapDbToY(value, h);
+  return h / 2;
+}
+
+function yToAutomationValue(param, y, h) {
+  if (param === "freq") return yToFreq(y, h);
+  if (param === "db") return yToDb(y, h);
+  return 0;
+}
+
+function automationStateForFx(fx, layer) {
+  const param = effectPrimaryParam(fx);
+  if (!param) return null;
+
+  const automation = ensureEffectAutomation(
+    fx,
+    Number(layer.buffer?.duration) || 0
+  );
+  if (!automation) return null;
+
+  return {
+    param,
+    baseValue: effectBaseValue(fx),
+    keys: automation.keys,
+  };
+}
+
+function setConstantCurvePath(pathEl, clipW, y) {
+  if (!pathEl) return;
+  const yy = Number(y) || 0;
+  pathEl.setAttribute("d", `M 0 ${yy} L ${clipW} ${yy}`);
+}
+
+function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave, requestRender) {
   if (!svgEl) return;
 
   const ns = "http://www.w3.org/2000/svg";
@@ -105,6 +162,16 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
   const s0 = Number(layer.trimStart) || 0;
   const srcDur = clipSourceDuration(layer);
   const s1 = s0 + srcDur;
+
+  const maybeRestartPlayback = () => {
+    if (state.playState !== "playing") return;
+    const now = performance.now();
+    if (!state._fxRestartAt || now - state._fxRestartAt > 80) {
+      state._fxRestartAt = now;
+      state.stopPlayback?.();
+      state.startPlayback?.();
+    }
+  };
 
   svgEl.setAttribute("viewBox", `0 0 ${clipW} ${clipH}`);
   svgEl.innerHTML = "";
@@ -121,75 +188,110 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
       ev.stopPropagation();
 
       const a = state.activeFx;
-      if (!a || a.layerId !== layer.id || a.param !== "freq") return;
+      if (!a || a.layerId !== layer.id || !a.param) return;
 
       const fx = (layer.effects || []).find((x) => x.id === a.fxId);
       if (!fx) return;
+
+      const auto = automationStateForFx(fx, layer);
+      if (!auto || auto.param !== a.param) return;
 
       const rect = svgEl.getBoundingClientRect();
       const x = Math.max(0, Math.min(clipW, ev.clientX - rect.left));
       const y = Math.max(0, Math.min(clipH, ev.clientY - rect.top));
 
       const s = (Number(layer.trimStart) || 0) + (x / state.pxPerSec) * rate;
-      const v = yToFreq(y, clipH);
+      const v = yToAutomationValue(auto.param, y, clipH);
 
       fx.automation ||= {};
-      fx.automation.freq ||= [];
-      fx.automation.freq.push({ s, v });
-      fx.automation.freq.sort((p, q) => (p.s ?? 0) - (q.s ?? 0));
+      fx.automation[auto.param] ||= [];
+      fx.automation[auto.param].push({ s, v });
+      fx.automation[auto.param].sort((p, q) => (p.s ?? 0) - (q.s ?? 0));
 
       scheduleSave?.();
-      drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave);
+      drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave, requestRender);
     });
   }
 
   const effects = layer.effects || [];
   for (const fx of effects) {
-    if (fx.type !== "lowpass" && fx.type !== "highpass") continue;
+    const auto = automationStateForFx(fx, layer);
+    if (!auto) continue;
 
-    const baseFreq = Number(fx.params?.freq) || (fx.type === "highpass" ? 80 : 12000);
-
-    fx.automation ||= {};
-    fx.automation.freq = ensureDefaultCurve(
-      fx.automation.freq,
-      (Number(layer.buffer?.duration) || 0) / 2,
-      baseFreq
-    );
-
-    const keys = fx.automation.freq;
+    const keys = auto.keys;
     const allowKeys = state.tools?.keys !== false;
-    const active = allowKeys && isActiveFx(state, layer, fx, "freq");
+    const active = allowKeys && isActiveFx(state, layer, fx, auto.param);
 
     const samples = Math.max(32, Math.min(400, Math.floor(clipW / 6)));
-    const curve = sampleCurve(keys, s0, s1, samples, baseFreq);
+    const curve = sampleCurve(keys, s0, s1, samples, auto.baseValue);
 
     let d = "";
     for (let i = 0; i < samples; i++) {
       const u = samples === 1 ? 0 : i / (samples - 1);
       const x = u * clipW;
-      const y = mapFreqToY(curve[i], clipH);
+      const y = mapAutomationValueToY(auto.param, curve[i], clipH);
       d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
     }
 
     const path = document.createElementNS(ns, "path");
     path.setAttribute("d", d);
     path.setAttribute("class", active ? "autoCurve active" : "autoCurve");
-    path.setAttribute("stroke", effectColor(fx.type, 88, active ? 68 : 64, active ? 0.92 : 0.34));
+    path.style.setProperty(
+      "--auto-curve-color",
+      effectColor(fx.type, 88, active ? 68 : 64, active ? 0.92 : 0.6)
+    );
+    const isConstant = keys.length === 0;
+    if (isConstant) path.classList.add("constant");
     svgEl.appendChild(path);
+
+    if (active && isConstant) {
+      path.style.pointerEvents = "stroke";
+      path.addEventListener("pointerdown", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const rect = svgEl.getBoundingClientRect();
+        const y0 = mapAutomationValueToY(auto.param, effectBaseValue(fx), clipH);
+        setConstantCurvePath(path, clipW, y0);
+
+        const onMove = (mv) => {
+          const y = Math.max(0, Math.min(clipH, mv.clientY - rect.top));
+          const nextValue = yToAutomationValue(auto.param, y, clipH);
+          setEffectBaseValue(fx, nextValue);
+
+          setConstantCurvePath(path, clipW, y);
+          scheduleSave?.();
+          maybeRestartPlayback();
+        };
+
+        const onUp = () => {
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          scheduleSave?.();
+          requestRender?.();
+        };
+
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+      });
+    }
 
     for (const k of keys) {
       const ks = Number(k.s) || 0;
       if (ks < s0 || ks > s1) continue;
 
       const x = ((ks - s0) / rate) * state.pxPerSec;
-      const y = mapFreqToY(k.v, clipH);
+      const y = mapAutomationValueToY(auto.param, k.v, clipH);
 
       const c = document.createElementNS(ns, "circle");
       c.setAttribute("cx", String(x));
       c.setAttribute("cy", String(y));
       c.setAttribute("r", String(active ? 4 : 3));
       c.setAttribute("class", active ? "autoKey active" : "autoKey");
-      c.setAttribute("fill", effectColor(fx.type, 88, 66, active ? 0.98 : 0.4));
+      c.style.setProperty(
+        "--auto-key-color",
+        effectColor(fx.type, 88, 66, active ? 0.98 : 0.4)
+      );
       svgEl.appendChild(c);
 
       if (!active) continue;
@@ -209,24 +311,15 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
           const maxS = Number(layer.buffer?.duration) || nextS;
 
           k.s = Math.max(0, Math.min(maxS, nextS));
-          k.v = yToFreq(y, clipH);
+          k.v = yToAutomationValue(auto.param, y, clipH);
 
           // apply audio feedback while dragging
           scheduleSave?.();
 
-          if (state.playState === "playing") {
-            const now = performance.now();
-            if (!state._fxRestartAt || now - state._fxRestartAt > 80) {
-              state._fxRestartAt = now;
-
-              // restart from current playhead to reapply automation
-              state.stopPlayback?.();
-              state.startPlayback?.();
-            }
-          }
+          maybeRestartPlayback();
 
           keys.sort((a, b) => (a.s ?? 0) - (b.s ?? 0));
-          drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave);
+          drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave, requestRender);
         };
 
         const onUp = (up) => {
@@ -329,7 +422,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       }
 
       scaleCanvasY(canvasWrapperEl, l.gain.gain.value);
-      drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH, scheduleSave);
+      drawFxAutomationOverlay(autoSvgEl, l, state, clipW, clipH, scheduleSave, requestRender);
 
       const trimOn = state.tools?.trim !== false;
       if (leftHandle) leftHandle.style.display = trimOn ? "" : "none";

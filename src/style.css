@@ -547,6 +547,7 @@ body[data-tool-move="0"] .clip {
 .layer .fxBlock .fxTitle {
   color: var(--fx-accent);
 }
+.layer .fxBlock.paramFx,
 .layer .fxBlock.pitchFx {
   align-items: stretch;
   min-width: 190px;
@@ -555,20 +556,24 @@ body[data-tool-move="0"] .clip {
 .layer .fxBody {
   width: 100%;
 }
+.layer .fxParamSlider,
 .layer .fxPitchSlider {
   --range-thumb-bg: var(--fx-accent);
   --range-track-bg: hsl(var(--fx-hue) 26% 70%/0.18);
 }
+.layer .fxParamRow,
 .layer .fxPitchRow {
   display: grid;
   grid-template-columns: 1fr 3em auto;
   gap: 6px;
   align-items: center;
 }
+.layer .fxParamValue,
 .layer .fxPitchValue {
   width: 3em;
   min-width: 3em;
 }
+.layer .fxParamSuffix,
 .layer .fxPitchSuffix {
   font-size: 11px;
   opacity: 0.7;
@@ -657,17 +662,21 @@ body[data-tool-move="0"] .clip {
 
 .autoCurve {
   fill: none;
-  stroke: var(--layer-effect-outline);
+  stroke: var(--auto-curve-color, var(--layer-effect-outline));
   stroke-width: 2;
-  opacity: 0.25;
+  opacity: 0.5;
 }
 
 .autoCurve.active {
   opacity: 0.9;
 }
 
+.autoCurve.constant {
+  cursor: ns-resize;
+}
+
 .autoKey {
-  fill: var(--layer-effect-outline);
+  fill: var(--auto-key-color, var(--layer-effect-outline));
   stroke: rgba(0, 0, 0, 0.6);
   stroke-width: 1;
   pointer-events: all;

@@ -1,5 +1,10 @@
 import { audioBufferToWav, downloadBlob } from "./wav.js";
-import { projectDuration, clipDuration } from "./models/timeline.js";
+import {
+  projectDuration,
+  clipDuration,
+  clipSourceDuration,
+  layerPlaybackRate,
+} from "./models/timeline.js";
 import { connectSourceThroughEffects } from "./models/effects.js";
 
 export function ensureCtx(state, masterGainValue) {
@@ -96,32 +101,40 @@ export async function startPlayback(state) {
 state.playing = state.layers
   .map((l) => {
     const in0 = Number(l.trimStart) || 0;
-    const dur = clipDuration(l);
-    if (dur <= 0.0001) return null;
+    const rate = layerPlaybackRate(l);
+    const srcDur = clipSourceDuration(l);
+    if (srcDur <= 0.0001) return null;
 
     const clipStart = Number(l.offset) || 0;
-    const clipEnd = clipStart + dur;
+    const clipEnd = clipStart + clipDuration(l);
 
     if (cursor >= clipEnd) return null;
 
     const when = t0 + Math.max(0, clipStart - cursor);
 
     const playedFromTimeline = Math.max(0, cursor - clipStart);
-    const offset = in0 + playedFromTimeline;
+    const playedFromSource = playedFromTimeline * rate;
+    const offset = in0 + playedFromSource;
 
-    const playDur = clipEnd - Math.max(cursor, clipStart);
-    if (playDur <= 0.0001) return null;
+    const playSrcDur = srcDur - playedFromSource;
+    if (playSrcDur <= 0.0001) return null;
 
     const src = state.ctx.createBufferSource();
     src.buffer = l.buffer;
+    src.playbackRate.value = rate;
     connectSourceThroughEffects(
       state.ctx,
       src,
       l,
       l.gain,
-      { absStartTime: when, srcStart: offset, srcEnd: offset + playDur }
+      {
+        absStartTime: when,
+        srcStart: offset,
+        srcEnd: offset + playSrcDur,
+        playbackRate: rate,
+      }
     );
-    src.start(when, offset, playDur);
+    src.start(when, offset, playSrcDur);
     return src;
   })
   .filter(Boolean);
@@ -161,11 +174,13 @@ export async function renderMixdownWav(state, masterGainValue) {
 
   for (const l of state.layers) {
     const in0 = Number(l.trimStart) || 0;
-    const dur = clipDuration(l);
-    if (dur <= 0.0001) continue;
+    const rate = layerPlaybackRate(l);
+    const srcDur = clipSourceDuration(l);
+    if (srcDur <= 0.0001) continue;
 
     const src = offline.createBufferSource();
     src.buffer = l.buffer;
+    src.playbackRate.value = rate;
 
     const g = offline.createGain();
     g.gain.value = l.gain.gain.value;
@@ -175,11 +190,16 @@ export async function renderMixdownWav(state, masterGainValue) {
       src,
       l,
       g,
-      { absStartTime: l.offset, srcStart: in0, srcEnd: in0 + dur }
+      {
+        absStartTime: l.offset,
+        srcStart: in0,
+        srcEnd: in0 + srcDur,
+        playbackRate: rate,
+      }
     );
 
     g.connect(master);
-    src.start(l.offset, in0, dur);
+    src.start(l.offset, in0, srcDur);
   }
 
   const out = await offline.startRendering();

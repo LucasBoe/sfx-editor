@@ -1,6 +1,19 @@
 import { dbToGain, gainToDb, formatDb, parseDb, clampDb, DB_MIN } from "./volume.js";
 import { setCanvasSize, scaleCanvasY } from "./canvasFit.js";
-import { setClipPosition, trackWidthPx, clipDuration } from "./models/timeline.js";
+import {
+  setClipPosition,
+  trackWidthPx,
+  clipDuration,
+  clipSourceDuration,
+  collectCrossTrackSnapPoints,
+  layerPlaybackRate,
+  snapTimeToPoints,
+} from "./models/timeline.js";
+import {
+  colorFromHue,
+  effectColor,
+  layerEffectTheme,
+} from "./models/effects.js";
 import { createTrimFeature } from "./features/trimFeature.js";
 import { createEffectsFeature } from "./features/effectsFeature.js";
 import { sampleCurve, ensureDefaultCurve } from "./models/automation.js";
@@ -13,6 +26,42 @@ function fmtSec(s) {
 
 function clamp01(x) {
   return Math.max(0, Math.min(1, x));
+}
+
+function applyLayerTint(layerEl, layer) {
+  if (!layerEl) return;
+
+  const theme = layerEffectTheme(layer);
+  layerEl.style.setProperty("--layer-effect-hue", String(theme.hue.toFixed(1)));
+  layerEl.style.setProperty(
+    "--layer-effect-outline",
+    colorFromHue(theme.hue, 90, 68, theme.count ? 0.96 : 0.88)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-line",
+    colorFromHue(theme.hue, 76, 62, theme.count ? 0.32 : 0.18)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-tint",
+    colorFromHue(theme.hue, 78, 60, theme.tintAlpha)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-tint-strong",
+    colorFromHue(theme.hue, 82, 62, theme.tintStrongAlpha)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-rack",
+    colorFromHue(theme.hue, 72, 54, theme.rackAlpha)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-wash",
+    colorFromHue(theme.hue, 76, 60, theme.washAlpha)
+  );
+  layerEl.style.setProperty(
+    "--layer-effect-glow",
+    colorFromHue(theme.hue, 90, 68, theme.count ? 0.28 : 0.16)
+  );
+  layerEl.dataset.hasEffects = theme.count > 0 ? "1" : "0";
 }
 
 function mapFreqToY(freq, h) {
@@ -51,10 +100,11 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
   if (!svgEl) return;
 
   const ns = "http://www.w3.org/2000/svg";
+  const rate = layerPlaybackRate(layer);
 
   const s0 = Number(layer.trimStart) || 0;
-  const dur = clipDuration(layer);
-  const s1 = s0 + dur;
+  const srcDur = clipSourceDuration(layer);
+  const s1 = s0 + srcDur;
 
   svgEl.setAttribute("viewBox", `0 0 ${clipW} ${clipH}`);
   svgEl.innerHTML = "";
@@ -80,7 +130,7 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
       const x = Math.max(0, Math.min(clipW, ev.clientX - rect.left));
       const y = Math.max(0, Math.min(clipH, ev.clientY - rect.top));
 
-      const s = (Number(layer.trimStart) || 0) + x / state.pxPerSec;
+      const s = (Number(layer.trimStart) || 0) + (x / state.pxPerSec) * rate;
       const v = yToFreq(y, clipH);
 
       fx.automation ||= {};
@@ -124,13 +174,14 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
     const path = document.createElementNS(ns, "path");
     path.setAttribute("d", d);
     path.setAttribute("class", active ? "autoCurve active" : "autoCurve");
+    path.setAttribute("stroke", effectColor(fx.type, 88, active ? 68 : 64, active ? 0.92 : 0.34));
     svgEl.appendChild(path);
 
     for (const k of keys) {
       const ks = Number(k.s) || 0;
       if (ks < s0 || ks > s1) continue;
 
-      const x = (ks - s0) * state.pxPerSec;
+      const x = ((ks - s0) / rate) * state.pxPerSec;
       const y = mapFreqToY(k.v, clipH);
 
       const c = document.createElementNS(ns, "circle");
@@ -138,6 +189,7 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
       c.setAttribute("cy", String(y));
       c.setAttribute("r", String(active ? 4 : 3));
       c.setAttribute("class", active ? "autoKey active" : "autoKey");
+      c.setAttribute("fill", effectColor(fx.type, 88, 66, active ? 0.98 : 0.4));
       svgEl.appendChild(c);
 
       if (!active) continue;
@@ -153,7 +205,7 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
           const x = Math.max(0, Math.min(clipW, mv.clientX - rect.left));
           const y = Math.max(0, Math.min(clipH, mv.clientY - rect.top));
 
-          const nextS = (Number(layer.trimStart) || 0) + x / state.pxPerSec;
+          const nextS = (Number(layer.trimStart) || 0) + (x / state.pxPerSec) * rate;
           const maxS = Number(layer.buffer?.duration) || nextS;
 
           k.s = Math.max(0, Math.min(maxS, nextS));
@@ -203,13 +255,14 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
   const w = trackWidthPx(state);
   layersEl.style.setProperty("--timeline-width", `${w}px`);
 
-  const trim = createTrimFeature({ state, scheduleSave });
+  const trim = createTrimFeature({ state, scheduleSave, requestRender });
   const fx = createEffectsFeature({ state, scheduleSave, requestRender });
 
 
   for (const l of state.layers) {
     const frag = template.content.cloneNode(true);
 
+    const layerEl = frag.querySelector(".layer");
     const nameEl = frag.querySelector(".name");
     const offsetEl = frag.querySelector(".offset");
     const volEl = frag.querySelector(".vol");
@@ -232,8 +285,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     }
 
     fx.render({ layer: l, menuEl: fxMenuEl, listEl: fxListEl });
-
-    nameEl.textContent = `${l.name} (${l.buffer.duration.toFixed(2)}s)`;
+    applyLayerTint(layerEl, l);
     offsetEl.value = String(l.offset);
 
     const db = gainToDb(l.gain.gain.value);
@@ -244,9 +296,13 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const rightHandle = frag.querySelector(".trimHandle.right");
 
     function redrawClip() {
+      const rate = layerPlaybackRate(l);
+      const srcDur = clipSourceDuration(l);
       const dur = clipDuration(l);
       const clipW = Math.max(30, Math.ceil(dur * state.pxPerSec));
 
+      nameEl.textContent = `${l.name} (${dur.toFixed(2)}s)`;
+      offsetEl.value = String(l.offset);
       clipEl.style.width = `${clipW}px`;
       setClipPosition(clipEl, l.offset, state.pxPerSec);
 
@@ -262,8 +318,11 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         setCanvasSize(c, tileW, clipH);
         
         const trimStart = Number(l.trimStart) || 0;
-        const t0 = trimStart + x0 / state.pxPerSec;
-        const t1 = trimStart + (x0 + tileW) / state.pxPerSec;
+        const t0 = trimStart + (x0 / state.pxPerSec) * rate;
+        const t1 = Math.min(
+          trimStart + srcDur,
+          trimStart + ((x0 + tileW) / state.pxPerSec) * rate
+        );
         
         drawWaveform(c, l.buffer, t0, t1);
         canvasWrapperEl.appendChild(c);
@@ -276,8 +335,8 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       if (leftHandle) leftHandle.style.display = trimOn ? "" : "none";
       if (rightHandle) rightHandle.style.display = trimOn ? "" : "none";
 
-      const inSec = Number(l.trimStart) || 0;
-      const outSec = Number(l.trimEnd) || 0;
+      const inSec = (Number(l.trimStart) || 0) / rate;
+      const outSec = (Number(l.trimEnd) || 0) / rate;
 
       clipEl.classList.toggle("hasTrimStart", inSec > 0);
       clipEl.classList.toggle("hasTrimEnd", outSec > 0);
@@ -372,14 +431,31 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
       const startX = e.clientX;
       const startOffset = l.offset;
+      const dur = clipDuration(l);
+      const snapPoints = collectCrossTrackSnapPoints(state.layers, l);
 
       const onMove = (ev) => {
         const dx = ev.clientX - startX;
         const raw = startOffset + dx / state.pxPerSec;
-        const snapped = Math.max(0, Math.round(raw * 100) / 100);
-        l.offset = snapped;
-        offsetEl.value = String(snapped);
-        setClipPosition(clipEl, snapped, state.pxPerSec);
+        let nextOffset = Math.max(0, raw);
+
+        if (state.tools?.snap !== false) {
+          const snapCandidates = [];
+          for (const point of snapPoints) {
+            snapCandidates.push(point);
+            snapCandidates.push(point - dur);
+          }
+          nextOffset = Math.max(
+            0,
+            snapTimeToPoints(nextOffset, snapCandidates, state.pxPerSec)
+          );
+        } else {
+          nextOffset = Math.round(nextOffset * 100) / 100;
+        }
+
+        l.offset = nextOffset;
+        offsetEl.value = String(nextOffset);
+        setClipPosition(clipEl, nextOffset, state.pxPerSec);
       };
 
       const onUp = (ev) => {
@@ -389,6 +465,7 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
         clipEl.removeEventListener("pointerup", onUp);
         clipEl.removeEventListener("pointercancel", onUp);
         scheduleSave();
+        requestRender?.();
       };
 
       clipEl.addEventListener("pointermove", onMove);

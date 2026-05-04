@@ -74,6 +74,9 @@
             <button id="toolKeys" type="button" title="toggle keyframe tool" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
               <span class="icon-pushpin"></span>
             </button>
+            <button id="toolSnap" type="button" title="toggle snapping" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
+              <span class="icon-magnet"></span>
+            </button>
           </div>
         </div>
 
@@ -114,9 +117,13 @@
                   value="0"
                 />
 
-                <input class="vol form-range range-custom" type="range" min="-80" max="12" step="0.1" value="0" />
-                <input class="volDb" type="text" value="0.0" />
-                <span class="dbSuffix">dB</span>
+                <div class="volRow">
+                  <span class="volLabel">Vol</span>
+                  <input class="vol form-range range-custom" type="range" min="-80" max="12" step="0.1" value="0" />
+                  <input class="volDb" type="text" value="0.0" />
+                  <span class="dbSuffix">dB</span>
+                </div>
+
                 <button type="button" class="btn btn-outline-danger btn-sm del" title="Delete layer">
                   <span class="icon-bin"></span>
                 </button>
@@ -170,6 +177,7 @@
           <template id="fxBlockTemplate">
             <div class="fxBlock" role="button" tabindex="0">
               <div class="fxTitle">Effect</div>
+              <div class="fxBody"></div>
 
               <div class="fxBtns">
                 <label class="fxSwitch" title="Enable effect">

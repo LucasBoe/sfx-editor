@@ -68,6 +68,7 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
           audio,
           gain,
           offset: Number(item.offset ?? 0),
+          pitchSemitones: Number(item.pitchSemitones ?? 0),
           trimStart: Number(item.trimStart ?? 0),
           trimEnd: Number(item.trimEnd ?? 0),
           effects: Array.isArray(item.effects) ? item.effects : [],

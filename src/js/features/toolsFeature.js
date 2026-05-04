@@ -1,14 +1,16 @@
 export function initTools({ state, dom, requestRender }) {
-  state.tools ||= { move: true, trim: true, keys: true };
+  state.tools ||= { move: true, trim: true, keys: true, snap: true };
 
   function apply() {
     document.body.dataset.toolMove = state.tools.move ? "1" : "0";
     document.body.dataset.toolTrim = state.tools.trim ? "1" : "0";
     document.body.dataset.toolKeys = state.tools.keys ? "1" : "0";
+    document.body.dataset.toolSnap = state.tools.snap ? "1" : "0";
 
     setBtn(dom.toolMoveEl, state.tools.move);
     setBtn(dom.toolTrimEl, state.tools.trim);
     setBtn(dom.toolKeysEl, state.tools.keys);
+    setBtn(dom.toolSnapEl, state.tools.snap);
   }
 
   function setBtn(btn, on) {
@@ -26,6 +28,7 @@ export function initTools({ state, dom, requestRender }) {
   dom.toolMoveEl?.addEventListener("click", () => toggle("move"));
   dom.toolTrimEl?.addEventListener("click", () => toggle("trim"));
   dom.toolKeysEl?.addEventListener("click", () => toggle("keys"));
+  dom.toolSnapEl?.addEventListener("click", () => toggle("snap"));
 
   apply();
 }

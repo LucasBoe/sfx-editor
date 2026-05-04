@@ -377,6 +377,14 @@ body[data-tool-move="0"] .clip {
 }
 
 .layer {
+  --layer-effect-hue: 46;
+  --layer-effect-outline: hsl(46 90% 68% / 0.88);
+  --layer-effect-line: hsl(46 76% 62% / 0.18);
+  --layer-effect-tint: hsl(46 78% 60% / 0.08);
+  --layer-effect-tint-strong: hsl(46 82% 62% / 0.12);
+  --layer-effect-rack: hsl(46 72% 54% / 0.09);
+  --layer-effect-wash: hsl(46 76% 60% / 0.05);
+  --layer-effect-glow: hsl(46 90% 68% / 0.16);
   align-items: start;
   gap: 12px;
   display: flex;
@@ -395,15 +403,43 @@ body[data-tool-move="0"] .clip {
     z-index: 5;
     width: $controls-width;
     padding: 0 12px;
-    background: rgba(0,0,0,.1);
+    background: linear-gradient(135deg, var(--layer-effect-wash), rgba(0, 0, 0, 0.12) 70%);
+    border-right: 1px solid var(--layer-effect-line);
     height: $layer-height;
+    display: grid;
+    align-content: center;
+    gap: 6px;
     
     .small {
-      visibility: hidden;
+      display: none;
+    }
+
+    .volRow {
+      display: grid;
+      grid-template-columns: 2.7rem 1fr 3em auto;
+      gap: 8px;
+      align-items: center;
     }
     
     input[type="range"] {
       width: 100%;
+    }
+
+    .volLabel {
+      font-size: 0.75em;
+      opacity: 0.78;
+    }
+
+    .dbSuffix {
+      font-size: 0.85em;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+
+    > .del {
+      position: absolute;
+      top: 6px;
+      right: 12px;
     }
   }
 
@@ -428,6 +464,8 @@ body[data-tool-move="0"] .clip {
     .name {
       text-overflow: ellipsis;
       white-space: nowrap;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 0 12px var(--layer-effect-glow);
     }
   }
 
@@ -436,9 +474,17 @@ body[data-tool-move="0"] .clip {
     top: $clip-distance;
     height: $clip-height;
     border-radius: 0.375rem;
-    outline: solid $clip-border-color;
+    outline: solid var(--layer-effect-outline);
     outline-width: 1.5px;
-    background: $backdrop-color;
+    background: linear-gradient(
+      180deg,
+      var(--layer-effect-tint-strong),
+      rgba(13, 28, 39, 0.94) 34%,
+      rgba(13, 28, 39, 0.98) 100%
+    );
+    box-shadow:
+      inset 0 0 0 1px var(--layer-effect-tint),
+      0 10px 22px rgba(0, 0, 0, 0.16);
 
     cursor: grab;
     user-select: none;
@@ -446,6 +492,10 @@ body[data-tool-move="0"] .clip {
 
     &.dragging {
       cursor: grabbing;
+      box-shadow:
+        inset 0 0 0 1px var(--layer-effect-tint),
+        0 0 0 3px var(--layer-effect-glow),
+        0 12px 28px rgba(0, 0, 0, 0.26);
     }
 
     .trimHandle {
@@ -567,9 +617,9 @@ body[data-tool-move="0"] .clip {
     height: $layer-height;
     padding: 6px;
 
-    background: rgba(149, 0, 75, 0.158);
+    background: linear-gradient(180deg, var(--layer-effect-rack), rgba(13, 28, 39, 0.22));
     backdrop-filter: blur(4px);
-    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 1px solid var(--layer-effect-line);
   }
 
   .dropdown-menu {
@@ -598,6 +648,12 @@ body[data-tool-move="0"] .clip {
   }
 
   .fxBlock {
+    --fx-hue: var(--layer-effect-hue);
+    --fx-accent: hsl(var(--fx-hue) 88% 67% / 0.96);
+    --fx-border: hsl(var(--fx-hue) 88% 67% / 0.86);
+    --fx-surface: hsl(var(--fx-hue) 78% 58% / 0.12);
+    --fx-surface-strong: hsl(var(--fx-hue) 82% 60% / 0.24);
+    --fx-glow: hsl(var(--fx-hue) 88% 67% / 0.42);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -607,14 +663,51 @@ body[data-tool-move="0"] .clip {
     border-radius: 5px;
     font-size: 12px;
     line-height: 1;
-    border: 1px solid $effect-color;
-    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--fx-border);
+    background: linear-gradient(180deg, var(--fx-surface), rgba(255, 255, 255, 0.05));
     color: rgba(255, 255, 255, 0.9);
     margin-left: 6px;
 
+    .fxTitle {
+      color: var(--fx-accent);
+    }
+
+    &.pitchFx {
+      align-items: stretch;
+      min-width: 190px;
+      padding-bottom: 24px;
+    }
+
+    .fxBody {
+      width: 100%;
+    }
+
+    .fxPitchSlider {
+      --range-thumb-bg: var(--fx-accent);
+      --range-track-bg: hsl(var(--fx-hue) 26% 70% / 0.18);
+    }
+
+    .fxPitchRow {
+      display: grid;
+      grid-template-columns: 1fr 3em auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .fxPitchValue {
+      width: 3em;
+      min-width: 3em;
+    }
+
+    .fxPitchSuffix {
+      font-size: 11px;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+
     &.active {
-      background: rgba(198, 29, 105, 0.402);
-      box-shadow: 0 0 0 3px rgba(253, 57, 145, 0.55);
+      background: linear-gradient(180deg, var(--fx-surface-strong), rgba(255, 255, 255, 0.08));
+      box-shadow: 0 0 0 3px var(--fx-glow);
     }
 
     &.disabled {
@@ -648,7 +741,7 @@ body[data-tool-move="0"] .clip {
       inset: 0;
       cursor: pointer;
       background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(253, 57, 145, 0.55);
+      border: 1px solid hsl(var(--fx-hue) 88% 67% / 0.55);
       border-radius: 999px;
       transition: 0.15s;
     }
@@ -667,13 +760,13 @@ body[data-tool-move="0"] .clip {
     }
 
     .fxSwitch input:checked + .fxSlider {
-      background: rgba(253, 57, 145, 0.22);
-      border-color: #{$effect-color};
+      background: hsl(var(--fx-hue) 88% 60% / 0.22);
+      border-color: var(--fx-border);
     }
 
     .fxSwitch input:checked + .fxSlider::before {
       transform: translate(16px, -50%);
-      background: #{$effect-color};
+      background: var(--fx-accent);
     }
 
 
@@ -708,7 +801,7 @@ body[data-tool-move="0"] .clip {
 
 .autoCurve {
   fill: none;
-  stroke: $effect-color;
+  stroke: var(--layer-effect-outline);
   stroke-width: 2;
   opacity: 0.25;
 }
@@ -718,7 +811,7 @@ body[data-tool-move="0"] .clip {
 }
 
 .autoKey {
-  fill: $effect-color;
+  fill: var(--layer-effect-outline);
   stroke: rgba(0, 0, 0, 0.6);
   stroke-width: 1;
   pointer-events: all;

@@ -16,6 +16,7 @@ export const dom = {
   toolMoveEl: document.getElementById("toolMove"),
   toolTrimEl: document.getElementById("toolTrim"),
   toolKeysEl: document.getElementById("toolKeys"),
+  toolSnapEl: document.getElementById("toolSnap"),
 
   masterVolEl: document.getElementById("masterVol"),
   masterDbEl: document.getElementById("masterDb"),

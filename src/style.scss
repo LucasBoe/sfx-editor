@@ -134,6 +134,11 @@ body[data-tool-keys="0"] .autoSvg {
   pointer-events: none;
 }
 
+body[data-tool-keys="0"] .autoCurve,
+body[data-tool-keys="0"] .autoKey {
+  pointer-events: none !important;
+}
+
 body[data-tool-move="0"] .clip {
   cursor: default;
 }
@@ -816,19 +821,30 @@ body[data-tool-move="0"] .clip {
   }
 
   .fxAdd {
-    --bs-btn-color: #{$effect-color};
-    --bs-btn-border-color: #{$effect-color};
-
-    --bs-btn-hover-bg: #{$effect-color};
-    --bs-btn-hover-border-color: #{$effect-color};
-    --bs-btn-hover-color: #{$backdrop-color};
-
-    --bs-btn-active-bg: #{$effect-color};
-    --bs-btn-active-border-color: #{$effect-color};
-    --bs-btn-active-color: #{$backdrop-color};
+    --bs-btn-color: rgba(255, 55, 165, 0.88);
+    --bs-btn-border-color: rgba(255, 55, 165, 0.48);
+    --bs-btn-hover-bg: rgba(8, 18, 28, 0.72);
+    --bs-btn-hover-border-color: rgba(255, 55, 165, 0.7);
+    --bs-btn-hover-color: rgba(255, 55, 165, 1);
+    --bs-btn-active-bg: rgba(255, 55, 165, 0.08);
+    --bs-btn-active-border-color: rgba(255, 55, 165, 0.9);
+    --bs-btn-active-color: rgba(255, 55, 165, 1);
+    background-color: rgba(8, 18, 28, 0.72);
+    border-radius: 7px;
+    box-shadow: none;
 
     &::after {
       content: none;
+    }
+
+    &:hover {
+      box-shadow: 0 0 10px rgba(255, 55, 165, 0.18);
+    }
+
+    &:active, &.show {
+      background: rgba(255, 55, 165, 0.08);
+      border-color: rgba(255, 55, 165, 0.9);
+      box-shadow: 0 0 16px rgba(255, 55, 165, 0.28);
     }
   }
 
@@ -854,9 +870,25 @@ body[data-tool-move="0"] .clip {
     border-radius: 9px;
     font-size: 12px;
     line-height: 1;
-    border: 1px solid var(--fx-border);
-    background: linear-gradient(180deg, var(--fx-surface), rgba(255, 255, 255, 0.05));
+    border: 1px solid color-mix(in srgb, var(--fx-accent) 58%, transparent);
+    background:
+      linear-gradient(
+        160deg,
+        var(--fx-surface) 0%,
+        transparent 60%
+      ),
+      rgba(8, 22, 31, 0.88);
+    box-shadow:
+      0 0 10px color-mix(in srgb, var(--fx-accent) 18%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
     color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: border-color 0.14s, box-shadow 0.14s;
+
+    &:hover:not(.active) {
+      border-color: color-mix(in srgb, var(--fx-accent) 75%, transparent);
+      box-shadow: 0 0 16px color-mix(in srgb, var(--fx-accent) 28%, transparent);
+    }
 
     .fxTitle {
       color: var(--fx-accent);
@@ -894,11 +926,11 @@ body[data-tool-move="0"] .clip {
       align-items: center;
       gap: 4px;
       min-width: 0;
-      padding: 4px 7px;
-      border-radius: 8px;
-      border: 1px solid hsl(var(--fx-hue) 70% 72% / 0.18);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      padding: 3px 7px;
+      border-radius: 7px;
+      border: 1px solid color-mix(in srgb, var(--fx-accent) 58%, transparent);
+      background: rgba(0, 0, 0, 0.28);
+      box-shadow: none;
     }
 
     .fxBody {
@@ -915,12 +947,22 @@ body[data-tool-move="0"] .clip {
     .fxParamSlider,
     .fxPitchSlider {
       --range-thumb-bg: var(--fx-accent);
-      --range-track-bg: hsl(var(--fx-hue) 26% 70% / 0.18);
-      --range-thumb-width: 1.05rem;
-      --range-thumb-height: 1.05rem;
-      --range-track-h: 0.48rem;
+      --range-track-bg: rgba(255, 255, 255, 0.13);
+      --range-thumb-width: 1rem;
+      --range-thumb-height: 1rem;
+      --range-track-h: 5px;
       width: 100%;
       margin: 0;
+
+      &::-webkit-slider-thumb {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 0 8px color-mix(in srgb, var(--fx-accent) 24%, transparent);
+      }
+
+      &::-moz-range-thumb {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 0 8px color-mix(in srgb, var(--fx-accent) 24%, transparent);
+      }
     }
 
     .fxValueInput {
@@ -947,8 +989,10 @@ body[data-tool-move="0"] .clip {
     }
 
     &.active {
-      background: linear-gradient(180deg, var(--fx-surface-strong), rgba(255, 255, 255, 0.08));
-      box-shadow: 0 0 0 3px var(--fx-glow);
+      border-color: color-mix(in srgb, var(--fx-accent) 80%, transparent);
+      box-shadow:
+        0 0 14px color-mix(in srgb, var(--fx-accent) 25%, transparent),
+        inset 2px 0 0 var(--fx-accent);
     }
 
     &.disabled {
@@ -976,8 +1020,8 @@ body[data-tool-move="0"] .clip {
       position: absolute;
       inset: 0;
       cursor: pointer;
-      background: rgba(255, 255, 255, 0.18);
-      border: 1px solid hsl(var(--fx-hue) 88% 67% / 0.55);
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.26);
       border-radius: 999px;
       transition: 0.15s;
     }
@@ -990,19 +1034,21 @@ body[data-tool-move="0"] .clip {
       left: 1px;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.50);
+      box-shadow: none;
       border-radius: 999px;
       transition: 0.15s;
     }
 
     .fxSwitch input:checked + .fxSlider {
-      background: hsl(var(--fx-hue) 88% 60% / 0.22);
-      border-color: var(--fx-border);
+      background: rgba(0, 0, 0, 0.28);
+      border-color: color-mix(in srgb, var(--fx-accent) 55%, transparent);
     }
 
     .fxSwitch input:checked + .fxSlider::before {
       transform: translate(14px, -50%);
       background: var(--fx-accent);
+      box-shadow: 0 0 6px color-mix(in srgb, var(--fx-accent) 28%, transparent);
     }
 
 
@@ -1016,15 +1062,23 @@ body[data-tool-move="0"] .clip {
     height: 18px;
     border: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(210, 220, 230, 0.55);
     padding: 0 2px;
     cursor: pointer;
     border-radius: 0 0 8px 8px;
+    box-shadow: none;
+    transition: color 0.14s, background 0.14s;
 
     &:hover {
-      background: $delete-color;
-      color: white;
-      outline: solid 1px rgb(252, 77, 94);
+      color: rgba(255, 65, 95, 1);
+      background: rgba(255, 65, 95, 0.08);
+      border-radius: 6px;
+      outline: none;
+    }
+
+    &:active {
+      background: rgba(255, 65, 95, 0.18);
+      color: rgba(255, 65, 95, 1);
     }
   }
 }
@@ -1034,7 +1088,7 @@ body[data-tool-move="0"] .clip {
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 2;
 }
 
@@ -1056,13 +1110,15 @@ body[data-tool-move="0"] .clip {
   stroke: var(--auto-curve-color, var(--layer-effect-outline));
   stroke-width: 2;
   opacity: 0.5;
+  pointer-events: none;
 }
 
 .autoCurve.active {
   opacity: 0.9;
 }
 
-.autoCurve.constant {
+.autoCurve.active.constant {
+  pointer-events: stroke;
   cursor: ns-resize;
 }
 
@@ -1070,13 +1126,14 @@ body[data-tool-move="0"] .clip {
   fill: var(--auto-key-color, var(--layer-effect-outline));
   stroke: rgba(0, 0, 0, 0.6);
   stroke-width: 1;
-  pointer-events: all;
+  pointer-events: none;
   cursor: pointer;
   opacity: 0.25;
 }
 
 .autoKey.active {
   opacity: 1;
+  pointer-events: all;
 }
 
 // loading overlay

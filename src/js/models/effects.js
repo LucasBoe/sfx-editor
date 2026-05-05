@@ -98,13 +98,7 @@ export function ensureEffectAutomation(fx, bufferDuration = 0) {
   if (!param) return null;
 
   const rawKeys = Array.isArray(fx.automation[param]) ? fx.automation[param] : [];
-
-  if (rawKeys.length === 1) {
-    setEffectBaseValue(fx, rawKeys[0]?.v);
-    fx.automation[param] = [];
-  } else {
-    fx.automation[param] = rawKeys;
-  }
+  fx.automation[param] = rawKeys;
 
   const fallback = effectBaseValue(fx);
 

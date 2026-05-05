@@ -102,9 +102,10 @@ function mapDbToY(db, h) {
 function mapFadeDbToY(db, h) {
   const min = -96;
   const max = 0;
-  const clamped = Math.max(min, Math.min(max, Number(db) || min));
+  const value = Number(db);
+  const clamped = Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
   const t = (clamped - min) / Math.max(1e-9, max - min);
-  return (1 - t) * (h - 10) + 5;
+  return (1 - t) * h;
 }
 
 function isActiveFx(state, layer, fx, param) {
@@ -198,6 +199,40 @@ function buildSmoothPathD(points) {
   return `M ${points[0].x} ${points[0].y} ${buildSmoothCurveCommands(points)}`;
 }
 
+function tryAddAutomationKeyAtEvent(ev, boundsEl, layer, state, scheduleSave, requestRender) {
+  if (state.tools?.keys === false) return;
+  if (ev.target?.closest?.(".fadeHandle, .trimHandle, .autoKey")) return;
+
+  const activeFxState = state.activeFx;
+  if (!activeFxState || activeFxState.layerId !== layer.id || !activeFxState.param) return;
+
+  const fx = (layer.effects || []).find((item) => item.id === activeFxState.fxId);
+  if (!fx) return;
+
+  const auto = automationStateForFx(fx, layer);
+  if (!auto || auto.param !== activeFxState.param) return;
+
+  ev.preventDefault();
+  ev.stopPropagation();
+
+  const rect = boundsEl.getBoundingClientRect();
+  const clipW = Math.max(1, boundsEl.clientWidth || rect.width || 1);
+  const clipH = Math.max(1, boundsEl.clientHeight || rect.height || 1);
+  const x = Math.max(0, Math.min(clipW, ev.clientX - rect.left));
+  const y = Math.max(0, Math.min(clipH, ev.clientY - rect.top));
+  const rate = layerPlaybackRate(layer);
+  const s = (Number(layer.trimStart) || 0) + (x / state.pxPerSec) * rate;
+  const v = yToAutomationValue(auto.param, y, clipH);
+
+  fx.automation ||= {};
+  fx.automation[auto.param] ||= [];
+  fx.automation[auto.param].push({ s, v });
+  fx.automation[auto.param].sort((a, b) => (a.s ?? 0) - (b.s ?? 0));
+
+  scheduleSave?.();
+  requestRender?.();
+}
+
 function drawFadeOverlay(svgEl, layer, clipW, clipH, pxPerSec) {
   if (!svgEl) return;
 
@@ -217,7 +252,7 @@ function drawFadeOverlay(svgEl, layer, clipW, clipH, pxPerSec) {
     const line = document.createElementNS(ns, "path");
     const pathD = buildSmoothPathD(points);
     const areaCurveCommands = buildSmoothCurveCommands(points);
-    const areaD = `M ${points[0].x} ${clipH} L ${points[0].x} ${points[0].y} ${areaCurveCommands} L ${points[points.length - 1].x} ${clipH} Z`;
+    const areaD = `M ${points[0].x} 0 L ${points[0].x} ${points[0].y} ${areaCurveCommands} L ${points[points.length - 1].x} 0 Z`;
 
     area.setAttribute("d", areaD);
     area.setAttribute("class", "fadeFill");
@@ -282,43 +317,6 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
   svgEl.setAttribute("viewBox", `0 0 ${clipW} ${clipH}`);
   svgEl.innerHTML = "";
 
-  // bind dblclick once per svg instance, not inside key loop
-  if (!svgEl._autoBound) {
-    svgEl._autoBound = true;
-
-    svgEl.addEventListener("dblclick", (ev) => {
-      
-      if (state.tools?.keys === false) return;
-
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      const a = state.activeFx;
-      if (!a || a.layerId !== layer.id || !a.param) return;
-
-      const fx = (layer.effects || []).find((x) => x.id === a.fxId);
-      if (!fx) return;
-
-      const auto = automationStateForFx(fx, layer);
-      if (!auto || auto.param !== a.param) return;
-
-      const rect = svgEl.getBoundingClientRect();
-      const x = Math.max(0, Math.min(clipW, ev.clientX - rect.left));
-      const y = Math.max(0, Math.min(clipH, ev.clientY - rect.top));
-
-      const s = (Number(layer.trimStart) || 0) + (x / state.pxPerSec) * rate;
-      const v = yToAutomationValue(auto.param, y, clipH);
-
-      fx.automation ||= {};
-      fx.automation[auto.param] ||= [];
-      fx.automation[auto.param].push({ s, v });
-      fx.automation[auto.param].sort((p, q) => (p.s ?? 0) - (q.s ?? 0));
-
-      scheduleSave?.();
-      drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave, requestRender);
-    });
-  }
-
   const effects = layer.effects || [];
   for (const fx of effects) {
     const auto = automationStateForFx(fx, layer);
@@ -351,7 +349,6 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
     svgEl.appendChild(path);
 
     if (active && isConstant) {
-      path.style.pointerEvents = "stroke";
       path.addEventListener("pointerdown", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -359,8 +356,17 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
         const rect = svgEl.getBoundingClientRect();
         const y0 = mapAutomationValueToY(auto.param, effectBaseValue(fx), clipH);
         setConstantCurvePath(path, clipW, y0);
+        const startY = ev.clientY;
+        const dragThresholdPx = 3;
+        let didDrag = false;
 
         const onMove = (mv) => {
+          if (mv.pointerId !== ev.pointerId) return;
+          if (!didDrag) {
+            if (Math.abs(mv.clientY - startY) < dragThresholdPx) return;
+            didDrag = true;
+          }
+
           const y = Math.max(0, Math.min(clipH, mv.clientY - rect.top));
           const nextValue = yToAutomationValue(auto.param, y, clipH);
           setEffectBaseValue(fx, nextValue);
@@ -370,15 +376,21 @@ function drawFxAutomationOverlay(svgEl, layer, state, clipW, clipH, scheduleSave
           maybeRestartPlayback();
         };
 
-        const onUp = () => {
+        const onUp = (up) => {
+          if (up.pointerId !== ev.pointerId) return;
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
+          if (!didDrag) return;
           scheduleSave?.();
           requestRender?.();
         };
 
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
+      });
+
+      path.addEventListener("dblclick", (ev) => {
+        tryAddAutomationKeyAtEvent(ev, svgEl, layer, state, scheduleSave, requestRender);
       });
     }
 
@@ -702,18 +714,23 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       if (!state.tools?.move) return;
       if (e.target?.closest?.(".fadeHandle")) return;
       if (e.target?.closest?.(".trimHandle")) return;
-      if (e.target?.closest?.(".autoSvg")) return;
-
-      clipEl.classList.add("dragging");
-      clipEl.setPointerCapture(e.pointerId);
 
       const startX = e.clientX;
       const startOffset = l.offset;
       const dur = clipDuration(l);
       const snapPoints = collectCrossTrackSnapPoints(state.layers, l);
+      const dragThresholdPx = 3;
+      let didDrag = false;
 
       const onMove = (ev) => {
+        if (ev.pointerId !== e.pointerId) return;
         const dx = ev.clientX - startX;
+        if (!didDrag) {
+          if (Math.abs(dx) < dragThresholdPx) return;
+          didDrag = true;
+          clipEl.classList.add("dragging");
+        }
+
         const raw = startOffset + dx / state.pxPerSec;
         let nextOffset = Math.max(0, raw);
 
@@ -737,18 +754,23 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       };
 
       const onUp = (ev) => {
+        if (ev.pointerId !== e.pointerId) return;
         clipEl.classList.remove("dragging");
-        clipEl.releasePointerCapture(ev.pointerId);
-        clipEl.removeEventListener("pointermove", onMove);
-        clipEl.removeEventListener("pointerup", onUp);
-        clipEl.removeEventListener("pointercancel", onUp);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        if (!didDrag) return;
         scheduleSave();
         requestRender?.();
       };
 
-      clipEl.addEventListener("pointermove", onMove);
-      clipEl.addEventListener("pointerup", onUp);
-      clipEl.addEventListener("pointercancel", onUp);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    });
+
+    clipEl.addEventListener("dblclick", (e) => {
+      tryAddAutomationKeyAtEvent(e, clipEl, l, state, scheduleSave, requestRender);
     });
 
     if (delEl) {

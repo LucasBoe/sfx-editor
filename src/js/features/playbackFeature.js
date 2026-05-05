@@ -77,11 +77,28 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
     void togglePlayback();
   });
 
-  dom.stopEl.addEventListener("click", () => {
+  function stopAndReset() {
     stopPlayback(state);
     state.setPlayheadTimeValue(state.playSessionStartTime);
     state.playState = "stopped";
     updatePlayButton();
+  }
+
+  dom.stopEl.addEventListener("click", stopAndReset);
+
+  document.addEventListener("keydown", (e) => {
+    const isEnter = e.code === "Enter" || e.key === "Enter";
+    if (!isEnter || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (isTypingTarget(e.target)) return;
+
+    e.preventDefault();
+    if (state.playState === "playing") {
+      stopAndReset();
+    } else {
+      state.setPlayheadTimeValue?.(state.playSessionStartTime ?? state.playheadTime);
+      state.playState = "stopped";
+      void togglePlayback();
+    }
   });
 
   return { updatePlayButton };

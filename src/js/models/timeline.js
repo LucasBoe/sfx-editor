@@ -5,9 +5,30 @@ export const FADE_DB_FLOOR = -96;
 
 const MIN_CLIP_BODY_SOURCE_DUR = 0.01;
 const FADE_MIN_GAIN = Math.pow(10, FADE_DB_FLOOR / 20);
+const FADE_LINEAR_BLEND = 0.08;
 
 function clamp01(x) {
   return Math.max(0, Math.min(1, x));
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function dbToGain(db) {
+  return Math.pow(10, db / 20);
+}
+
+function shapedFadeDb(progress, mode) {
+  const t = clamp01(progress);
+  const curved = mode === "out"
+    ? Math.cos((t * Math.PI) / 2)
+    : Math.sin((t * Math.PI) / 2);
+  const linear = mode === "out" ? (1 - t) : t;
+
+  // Keep the fades natural, but nudge the visual shape closer to a straight ramp.
+  const shaped = lerp(curved, linear, FADE_LINEAR_BLEND);
+  return FADE_DB_FLOOR + (0 - FADE_DB_FLOOR) * shaped;
 }
 
 export function clampPitchSemitones(semitones) {
@@ -81,13 +102,11 @@ export function clipFadeOutDuration(layer) {
 }
 
 function fadeInGainAt(progress) {
-  const t = clamp01(progress);
-  return FADE_MIN_GAIN + (1 - FADE_MIN_GAIN) * Math.sin((t * Math.PI) / 2);
+  return Math.max(FADE_MIN_GAIN, dbToGain(shapedFadeDb(progress, "in")));
 }
 
 function fadeOutGainAt(progress) {
-  const t = clamp01(progress);
-  return FADE_MIN_GAIN + (1 - FADE_MIN_GAIN) * Math.cos((t * Math.PI) / 2);
+  return Math.max(FADE_MIN_GAIN, dbToGain(shapedFadeDb(progress, "out")));
 }
 
 export function clipFadeGainAtSourceTime(layer, sourceTime) {

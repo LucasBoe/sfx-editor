@@ -2,6 +2,16 @@ import { dbToGain } from "../volume.js";
 import { sliderFromZoom } from "../zoomConfig.js";
 import { setZoomLabel } from "../ui.js";
 import { restoreMasterUi } from "./masterFeature.js";
+import { applyFitZoomForDuration } from "./fitZoom.js";
+
+const DEFAULT_STARTER_LAYER = {
+  url: "/audio/sheep.wav",
+  name: "sheep.wav",
+};
+
+function createLayerId() {
+  return (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).toString();
+}
 
 export function createPersistence({ state, dom, setLoading, loadProject, saveProject, clearProject, ensureCtx, decodeAudio, createGainToMaster }) {
   let timer = 0;
@@ -16,6 +26,8 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
         layers: state.layers.map((l) => ({
           id: l.id,
           name: l.name,
+          sourceUrl: l.sourceUrl,
+          starterSeed: !!l.starterSeed,
           offset: l.offset,
           trimStart: l.trimStart,
           trimEnd: l.trimEnd,
@@ -38,27 +50,69 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
     timer = setTimeout(saveNow, 250);
   }
 
+  async function loadStarterLayer() {
+    const response = await fetch(DEFAULT_STARTER_LAYER.url);
+    if (!response.ok) {
+      throw new Error(`Failed to load starter audio: ${response.status}`);
+    }
+
+    const audio = await response.arrayBuffer();
+    const buffer = await decodeAudio(state.ctx, audio.slice(0));
+    const gain = createGainToMaster(state, 1);
+
+    return {
+      id: createLayerId(),
+      name: DEFAULT_STARTER_LAYER.name,
+      buffer,
+      audio,
+      sourceUrl: DEFAULT_STARTER_LAYER.url,
+      starterSeed: true,
+      gain,
+      offset: 0,
+      pitchSemitones: 0,
+      trimStart: 0,
+      trimEnd: 0,
+      fadeIn: 0,
+      fadeOut: 0,
+      effects: [],
+      muted: false,
+    };
+  }
+
   async function restore(renderAll) {
     setLoading(true, "Restoring project");
     try {
       const project = await loadProject();
-      if (!project) return;
 
       // master
-      restoreMasterUi(dom, project.masterVol ?? 1);
+      restoreMasterUi(dom, project?.masterVol ?? 1);
 
       // zoom
-      state.pxPerSec = Number(project.pxPerSec ?? state.pxPerSec);
+      state.pxPerSec = Number(project?.pxPerSec ?? state.pxPerSec);
       dom.zoomEl.value = String(sliderFromZoom(state.pxPerSec));
       setZoomLabel(Math.round(state.pxPerSec));
 
       // playhead
-      state.playheadTime = Number(project.playheadTime ?? 0);
-      state.playSessionStartTime = Number(project.playSessionStartTime ?? state.playheadTime);
+      state.playheadTime = Number(project?.playheadTime ?? 0);
+      state.playSessionStartTime = Number(project?.playSessionStartTime ?? state.playheadTime);
 
       // layers
       ensureCtx(state, dbToGain(Number(dom.masterVolEl.value)));
       state.layers = [];
+
+      if (!project) {
+        const starterLayer = await loadStarterLayer();
+        state.layers.push(starterLayer);
+        applyFitZoomForDuration({
+          state,
+          dom,
+          durationSec: Number(starterLayer.buffer?.duration) || 0,
+        });
+        renderAll();
+        if (dom.layersEl) dom.layersEl.scrollLeft = 0;
+        state.setPlayheadTimeValue(0);
+        return;
+      }
 
       for (const item of project.layers ?? []) {
         const audio = item.audio;
@@ -71,6 +125,8 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
           name: item.name,
           buffer,
           audio,
+          sourceUrl: item.sourceUrl,
+          starterSeed: !!item.starterSeed,
           gain,
           offset: Number(item.offset ?? 0),
           pitchSemitones: Number(item.pitchSemitones ?? 0),

@@ -7,8 +7,8 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
         ? '<span class="icon-pause2"></span>'
         : '<span class="icon-play3"></span>';
 
-    dom.stopEl.classList.toggle("is-playing", state.playState === "playing");
-
+    dom.playEl.classList.toggle("active", state.playState !== "playing");
+    dom.stopEl.classList.toggle("active", state.playState === "playing");
   }
 
   state.onPlaybackEnded = () => {

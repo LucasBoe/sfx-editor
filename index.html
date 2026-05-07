@@ -26,72 +26,83 @@
       <div class="row d-flex gap-2 align-items-center flex-wrap mb-3">
 
         <!-- FILE INPUT / EXPORT -->
-        <input id="files" type="file" accept="audio/*" multiple class="visually-hidden" />
-        <label for="files" class="col-md-auto btn btn-outline-secondary">
-          <span class="icon-upload"></span>
-        </label>
-
-        <button id="render" class="col-md-auto btn btn-outline-primary">
+        <div class="toolbar-section">
+          <span class="section-label">File</span>
+          <input id="files" type="file" accept="audio/*" multiple class="visually-hidden" />
+          <label for="files" class="col-md-auto newBtn">
+            <span class="icon-upload"></span>
+          </label>
+          <button id="render" class="col-md-auto newBtn">
             <span class="icon-download"></span>
-        </button>
+          </button>
+        </div>
 
         <!-- ZOOM -->
-        <label class="col-md-auto zoom d-flex align-items-center gap-2 mx-2">
-          <span class="col-md-auto">Zoom</span>
-
-          <button id="zoomOut" type="button" class="btn btn-outline-secondary btn-sm">
-            <span class="icon-minus"></span>
-          </button>
-
-          <input id="zoom" type="range" class="form-range range-custom" min="0" max="1000" step="1" value="0" />
-
-          <button id="zoomIn" type="button" class="btn btn-outline-secondary btn-sm">
-            <span class="icon-plus"></span>
-          </button>
-
-          <span id="zoomVal">800</span>
-          <span class="col-md-auto">px/s<span>
-        </label>
+        <div class="toolbar-section">
+          <span class="section-label">Zoom</span>
+          <label class="col-md-auto zoom d-flex align-items-center gap-2">
+            <button id="zoomOut" type="button" class="newBtn">
+              <span class="icon-minus"></span>
+            </button>
+            <input id="zoom" type="range" class="form-range range-custom" min="0" max="1000" step="1" value="0" />
+            <button id="zoomIn" type="button" class="newBtn">
+              <span class="icon-plus"></span>
+            </button>
+            <span id="zoomVal" class="volDb">800</span>
+            <span class="dbSuffix">px/s</span>
+          </label>
+        </div>
 
         <!-- PLAY / STOP -->
-        <button id="play" class="col-md-auto btn btn-primary">
+        <div class="toolbar-section">
+          <span class="section-label">Transport</span>
+          <button id="play" class="col-md-auto newBtn playStopBtns active">
             <span class="icon-play3"></span>
-        </button>
-        <button id="stop" class="col-md-auto btn btn-outline-secondary">
+          </button>
+          <button id="stop" class="col-md-auto newBtn playStopBtns">
             <span class="icon-stop2"></span>
-        </button>
+          </button>
+        </div>
 
         <!-- TOOLS -->
-        <div class="col-md-auto master d-flex align-items-center gap-2 ms-auto mx-2" role="toolbar" aria-label="Toolbar with button groups">
-          <span class="col-md-auto">Tools:</span>
+        <div class="toolbar-section" role="toolbar" aria-label="Toolbar with button groups">
+          <span class="section-label">Tools</span>
           <div class="btn-group tools" role="group" aria-label="Tools">
-            <button id="toolMove" type="button" title="toggle move tool" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
+            <button id="toolMove" type="button" title="toggle move tool" class="newBtn toolBtn active" aria-pressed="true">
               <span class="icon-film"></span>
             </button>
-            <button id="toolTrim" type="button" title="toggle trim tool" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
+            <button id="toolTrim" type="button" title="toggle trim tool" class="newBtn toolBtn active" aria-pressed="true">
               <span class="icon-crop"></span>
             </button>
-            <button id="toolKeys" type="button" title="toggle keyframe tool" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
+            <button id="toolKeys" type="button" title="toggle keyframe tool" class="newBtn toolBtn active" aria-pressed="true">
               <span class="icon-pushpin"></span>
             </button>
-            <button id="toolSnap" type="button" title="toggle snapping" class="btn btn-outline-secondary btn-sm active" aria-pressed="true">
+            <button id="toolSnap" type="button" title="toggle snapping" class="newBtn toolBtn active" aria-pressed="true">
               <span class="icon-magnet"></span>
             </button>
           </div>
         </div>
 
         <!-- MASTER VOLUME -->
-        <label class="col-md-auto master d-flex align-items-center gap-2 ms-auto mx-2">
-          Master
-          <input id="masterVol" type="range" class="form-range range-custom" min="-80" max="12" step="0.1" value="0" />
-          <input id="masterDb" type="text" value="0.0" />
-          <span class="dbSuffix">dB</span>
-        </label>
+        <div class="toolbar-section">
+          <span class="section-label">Master</span>
+          <label class="d-flex align-items-center gap-2">
+            <input id="masterVol" type="range" class="form-range range-custom" min="-80" max="12" step="0.1" value="0" />
+            <div class="volPill">
+              <input id="masterDb" class="volDb" type="text" value="0.0" />
+              <span class="dbSuffix">dB</span>
+            </div>
+          </label>
+        </div>
 
         <!-- CLEAR PROJECT -->
-        <button id="clear" class="col-md-auto btn btn-outline-danger">
+        <div class="toolbar-section">
+          <span class="section-label">Clear</span>
+          <button id="clear" class="col-md-auto newBtn">
             <span class="icon-bin"></span>
-        </button>
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -118,10 +129,10 @@
                 />
 
                 <div class="controlsTop">
-                  <button type="button" class="layerBtn del" title="Delete layer" aria-label="Delete layer">
+                  <button type="button" class="newBtn layerBtn del" title="Delete layer" aria-label="Delete layer">
                     <span class="icon-bin"></span>
                   </button>
-                  <button type="button" class="layerBtn mute" title="Mute layer" aria-label="Mute layer" aria-pressed="false">
+                  <button type="button" class="newBtn layerBtn mute" title="Mute layer" aria-label="Mute layer" aria-pressed="false">
                     <span class="icon-volume-medium"></span>
                   </button>
                 </div>
@@ -165,7 +176,7 @@
               <div class="effectsRack">
                 <div class="btn-group">
                   <button
-                    class="fxAdd btn btn-outline-secondary btn-sm dropdown-toggle"
+                    class="newBtn fxAdd dropdown-toggle"
                     type="button"
                     data-bs-toggle="dropdown"
                     aria-expanded="false"

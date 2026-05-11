@@ -50,7 +50,9 @@ export function createGainToMaster(state, value) {
 
 function clampTime(state, t) {
   const dur = projectDuration(state.layers || []);
-  return Math.max(0, Math.min(Number(t) || 0, dur));
+  const override = Number(state?.playheadMaxTime);
+  const maxTime = Number.isFinite(override) ? Math.max(dur, override) : dur;
+  return Math.max(0, Math.min(Number(t) || 0, maxTime));
 }
 
 export function setPlayheadTimeValue(state, t) {

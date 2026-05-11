@@ -1,4 +1,5 @@
 import { dbToGain } from "../volume.js";
+import { createAudioLayer, createLayerId } from "../models/layers.js";
 import { sliderFromZoom } from "../zoomConfig.js";
 import { setZoomLabel } from "../ui.js";
 import { restoreMasterUi } from "./masterFeature.js";
@@ -8,10 +9,6 @@ const DEFAULT_STARTER_LAYER = {
   url: "/audio/sheep.wav",
   name: "sheep.wav",
 };
-
-function createLayerId() {
-  return (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).toString();
-}
 
 export function createPersistence({ state, dom, setLoading, loadProject, saveProject, clearProject, ensureCtx, decodeAudio, createGainToMaster }) {
   let timer = 0;
@@ -61,21 +58,16 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
     const gain = createGainToMaster(state, 1);
 
     return {
-      id: createLayerId(),
-      name: DEFAULT_STARTER_LAYER.name,
+      ...createAudioLayer({
+        id: createLayerId(),
+        name: DEFAULT_STARTER_LAYER.name,
+        buffer,
+        audio,
+        sourceUrl: DEFAULT_STARTER_LAYER.url,
+        starterSeed: true,
+        gain,
+      }),
       buffer,
-      audio,
-      sourceUrl: DEFAULT_STARTER_LAYER.url,
-      starterSeed: true,
-      gain,
-      offset: 0,
-      pitchSemitones: 0,
-      trimStart: 0,
-      trimEnd: 0,
-      fadeIn: 0,
-      fadeOut: 0,
-      effects: [],
-      muted: false,
     };
   }
 
@@ -120,13 +112,12 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
         const intendedGain = Number(item.gain ?? 1);
         const isMuted = !!item.muted;
         const gain = createGainToMaster(state, isMuted ? 0 : intendedGain);
-        state.layers.push({
-          id: item.id || crypto.randomUUID(),
+        state.layers.push(createAudioLayer({
+          id: item.id || createLayerId(),
           name: item.name,
           buffer,
           audio,
           sourceUrl: item.sourceUrl,
-          starterSeed: !!item.starterSeed,
           gain,
           offset: Number(item.offset ?? 0),
           pitchSemitones: Number(item.pitchSemitones ?? 0),
@@ -136,8 +127,9 @@ export function createPersistence({ state, dom, setLoading, loadProject, savePro
           fadeOut: Math.max(0, Number(item.fadeOut ?? 0) || 0),
           effects: Array.isArray(item.effects) ? item.effects : [],
           muted: isMuted,
+          starterSeed: !!item.starterSeed,
           preMuteGain: isMuted ? intendedGain : undefined,
-        });
+        }));
       }
 
       renderAll();

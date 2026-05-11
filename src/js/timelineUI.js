@@ -46,6 +46,34 @@ function clamp01(x) {
   return Math.max(0, Math.min(1, x));
 }
 
+function renderRecordingPlaceholder(canvasWrapperEl) {
+  if (!canvasWrapperEl) return;
+  canvasWrapperEl.innerHTML = "";
+  const placeholderEl = document.createElement("div");
+  placeholderEl.className = "recordingWavePlaceholder";
+
+  const overlayEl = document.createElement("div");
+  overlayEl.className = "recordingWaveOverlay";
+
+  const badgeEl = document.createElement("div");
+  badgeEl.className = "recordingWaveBadge";
+  badgeEl.textContent = "LIVE INPUT";
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "recordingWaveTitle";
+  titleEl.textContent = "Recording in progress";
+
+  const hintEl = document.createElement("div");
+  hintEl.className = "recordingWaveHint";
+  hintEl.textContent = "Waveform will appear when capture stops";
+
+  overlayEl.appendChild(badgeEl);
+  overlayEl.appendChild(titleEl);
+  overlayEl.appendChild(hintEl);
+  canvasWrapperEl.appendChild(placeholderEl);
+  placeholderEl.appendChild(overlayEl);
+}
+
 function applyLayerTint(layerEl, layer) {
   if (!layerEl) return;
 
@@ -471,8 +499,13 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
   const fx = createEffectsFeature({ state, scheduleSave, requestRender });
 
 
-  for (const l of state.layers) {
+  const visibleLayers = state.recording?.previewLayer
+    ? [...state.layers, state.recording.previewLayer]
+    : state.layers;
+
+  for (const l of visibleLayers) {
     const frag = template.content.cloneNode(true);
+    const isRecordingPreview = !!l.isRecordingPlaceholder;
 
     const layerEl = frag.querySelector(".layer");
     const nameEl = frag.querySelector(".name");
@@ -502,9 +535,21 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       throw new Error("Missing .fxMenu or .fxList in #layerTemplate");
     }
 
-    fx.render({ layer: l, menuEl: fxMenuEl, listEl: fxListEl });
+    if (!isRecordingPreview) {
+      fx.render({ layer: l, menuEl: fxMenuEl, listEl: fxListEl });
+    } else {
+      fxMenuEl.innerHTML = "";
+      fxListEl.innerHTML = "";
+    }
+
     applyLayerTint(layerEl, l);
+    layerEl.classList.toggle("recordingPreview", isRecordingPreview);
     offsetEl.value = String(l.offset);
+    offsetEl.disabled = isRecordingPreview;
+    volEl.disabled = isRecordingPreview;
+    volDbEl.disabled = isRecordingPreview;
+    muteEl.disabled = isRecordingPreview;
+    if (delEl) delEl.disabled = isRecordingPreview;
 
     const intendedGain = l.muted ? (l.preMuteGain ?? 1) : l.gain.gain.value;
     const db = gainToDb(intendedGain);
@@ -524,6 +569,10 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
     const rightHandle = frag.querySelector(".trimHandle.right");
 
     function redrawClip() {
+      if (isRecordingPreview && state.recording?.previewLayer === l) {
+        state.recording.redrawPreview = redrawClip;
+      }
+
       normalizeLayerFades(l);
 
       const rate = layerPlaybackRate(l);
@@ -539,6 +588,35 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
       setClipPosition(clipEl, l.offset, state.pxPerSec);
 
       if (!canvasWrapperEl) return;
+
+      if (isRecordingPreview) {
+        renderRecordingPlaceholder(canvasWrapperEl);
+        fadeSvgEl.innerHTML = "";
+        autoSvgEl.innerHTML = "";
+
+        if (leftHandle) leftHandle.style.display = "none";
+        if (rightHandle) rightHandle.style.display = "none";
+        if (fadeInHandleEl) fadeInHandleEl.style.display = "none";
+        if (fadeOutHandleEl) fadeOutHandleEl.style.display = "none";
+        if (trimInEl) {
+          trimInEl.textContent = "";
+          trimInEl.style.display = "none";
+        }
+        if (trimOutEl) {
+          trimOutEl.textContent = "";
+          trimOutEl.style.display = "none";
+        }
+        if (fadeInInfoEl) {
+          fadeInInfoEl.textContent = "";
+          fadeInInfoEl.style.display = "none";
+        }
+        if (fadeOutInfoEl) {
+          fadeOutInfoEl.textContent = "";
+          fadeOutInfoEl.style.display = "none";
+        }
+
+        return;
+      }
 
       canvasWrapperEl.innerHTML = "";
       const clipH = 96;
@@ -615,21 +693,25 @@ export function renderLayersUI({ state, layersEl, drawWaveform, scheduleSave, re
 
     tracksEl.appendChild(frag);
 
-    fade.attachFade({
-      layer: l,
-      leftHandle: fadeInHandleEl,
-      rightHandle: fadeOutHandleEl,
-      redrawClip,
-    });
+    if (!isRecordingPreview) {
+      fade.attachFade({
+        layer: l,
+        leftHandle: fadeInHandleEl,
+        rightHandle: fadeOutHandleEl,
+        redrawClip,
+      });
 
-    trim.attachTrim({
-      layer: l,
-      leftHandle,
-      rightHandle,
-      redrawClip,
-    });
+      trim.attachTrim({
+        layer: l,
+        leftHandle,
+        rightHandle,
+        redrawClip,
+      });
+    }
 
     redrawClip();
+
+    if (isRecordingPreview) continue;
 
     /*
     if (waveContainerEl) {

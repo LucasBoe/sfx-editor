@@ -10,7 +10,7 @@
     <div class="container">
       <div class="row">
         <div class="col">
-          <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.2</img></h1>
+          <h1 class="my-3">Sound Sheep <img src="src/soundsheep.png"> v.0.1.3</img></h1>
         </div>
         <div class="col d-flex align-items-center gap-2">
           <div id="globalMeter" class="meter" title="Click to reset peak and clip">
@@ -22,8 +22,10 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="row d-flex gap-2 align-items-center flex-wrap mb-3">
+    <div class="container-fluid toolbarShell">
+      <div class="toolbarBar">
 
         <!-- FILE INPUT / EXPORT -->
         <div class="toolbar-section">
@@ -38,7 +40,7 @@
         </div>
 
         <!-- ZOOM -->
-        <div class="toolbar-section">
+        <div class="toolbar-section transport-section">
           <span class="section-label">Zoom</span>
           <label class="col-md-auto zoom d-flex align-items-center gap-2">
             <button id="zoomOut" type="button" class="newBtn">
@@ -62,6 +64,13 @@
           <button id="stop" class="col-md-auto newBtn playStopBtns">
             <span class="icon-stop2"></span>
           </button>
+          <button id="record" class="col-md-auto newBtn playStopBtns" aria-pressed="false" title="Start recording">
+            <span class="icon-mic"></span>
+          </button>
+          <div id="recordStatus" class="recordStatus" aria-live="polite">
+            <span class="recordStatusDot"></span>
+            <span id="recordStatusText">Mic ready</span>
+          </div>
         </div>
 
         <!-- TOOLS -->

@@ -24,8 +24,8 @@ export function createGlobalMeterFeature({ state, dom, minDb = -60, maxDb = 12 }
   }
 
   function update() {
-    const a = state.masterAnalyser;
-    const buf = state._meterBuf;
+    const a = state.meterAnalyser ?? state.masterAnalyser;
+    const buf = state.meterBuf ?? state._meterBuf;
     if (!a || !buf) return;
 
     a.getFloatTimeDomainData(buf);

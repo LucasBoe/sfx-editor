@@ -58,6 +58,13 @@ export function layerPlaybackRate(layer) {
 }
 
 export function clipSourceDuration(layer) {
+  if (layer?.isRecordingPlaceholder) {
+    const previewDur = Number(layer?.previewDuration) || 0;
+    const a = Number(layer?.trimStart) || 0;
+    const b = Number(layer?.trimEnd) || 0;
+    return Math.max(0, previewDur - a - b);
+  }
+
   const bufDur = Number(layer?.buffer?.duration) || 0;
   const a = Number(layer?.trimStart) || 0;
   const b = Number(layer?.trimEnd) || 0;
@@ -166,7 +173,9 @@ export function trackWidthPx(stateOrLayers, pxPerSecValue) {
   const layers = hasState ? stateOrLayers.layers : stateOrLayers;
   const pxPerSec = Number(hasState ? stateOrLayers.pxPerSec : pxPerSecValue) || 0;
   const dur = projectDuration(layers);
-  return Math.max(300, Math.ceil(dur * pxPerSec) + 120);
+  const override = hasState ? Number(stateOrLayers.playheadMaxTime) : NaN;
+  const maxDur = Number.isFinite(override) ? Math.max(dur, override) : dur;
+  return Math.max(300, Math.ceil(maxDur * pxPerSec) + 120);
 }
 
 export function clipWidthPx(durationSec, pxPerSec, minPx = 30) {

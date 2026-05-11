@@ -1,16 +1,15 @@
 import { dbToGain } from "../volume.js";
+import { createAudioLayer, isStarterLayer } from "../models/layers.js";
 import { applyFitZoomForDuration } from "./fitZoom.js";
-
-function createLayerId() {
-  return (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).toString();
-}
-
-function isStarterLayer(layer) {
-  return !!layer?.starterSeed || layer?.sourceUrl === "/audio/sheep.wav";
-}
 
 export function initImport({ state, dom, setLoading, ensureCtx, decodeAudio, createGainToMaster, renderAll, scheduleSave }) {
   dom.filesEl.addEventListener("change", async (e) => {
+    if (state.recordState === "recording") {
+      alert("Stop recording before importing audio.");
+      e.target.value = "";
+      return;
+    }
+
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
@@ -27,20 +26,12 @@ export function initImport({ state, dom, setLoading, ensureCtx, decodeAudio, cre
         const audio = await f.arrayBuffer();
         const buffer = await decodeAudio(state.ctx, audio.slice(0));
         const gain = createGainToMaster(state, 1);
-        const layer = {
-          id: createLayerId(),
+        const layer = createAudioLayer({
           name: f.name,
           buffer,
           audio,
           gain,
-          offset: 0,
-          trimStart: 0,
-          trimEnd: 0,
-          fadeIn: 0,
-          fadeOut: 0,
-          effects: [],
-          muted: false,
-        };
+        });
         state.layers.push(layer);
         importedLayers.push(layer);
       }

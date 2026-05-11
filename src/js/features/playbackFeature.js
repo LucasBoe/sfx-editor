@@ -2,13 +2,16 @@ import { dbToGain } from "../volume.js";
 
 export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlayback }) {
   function updatePlayButton() {
+    const recording = state.recordState === "recording";
     dom.playEl.innerHTML =
       state.playState === "playing"
         ? '<span class="icon-pause2"></span>'
         : '<span class="icon-play3"></span>';
 
-    dom.playEl.classList.toggle("active", state.playState !== "playing");
-    dom.stopEl.classList.toggle("active", state.playState === "playing");
+    dom.playEl.classList.toggle("active", state.playState !== "playing" && !recording);
+    dom.stopEl.classList.toggle("active", state.playState === "playing" || recording);
+    dom.playEl.disabled = recording;
+    dom.playEl.setAttribute("aria-disabled", recording ? "true" : "false");
   }
 
   state.onPlaybackEnded = () => {
@@ -22,6 +25,8 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
   updatePlayButton();
 
   async function togglePlayback() {
+    if (state.recordState === "recording") return;
+
     if (state.playState === "playing") {
       state.playState = "paused";
       stopPlayback(state);
@@ -77,14 +82,22 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
     void togglePlayback();
   });
 
-  function stopAndReset() {
+  async function stopAndReset() {
+    if (state.recordState === "recording") {
+      await state.stopRecording?.();
+      updatePlayButton();
+      return;
+    }
+
     stopPlayback(state);
     state.setPlayheadTimeValue(state.playSessionStartTime);
     state.playState = "stopped";
     updatePlayButton();
   }
 
-  dom.stopEl.addEventListener("click", stopAndReset);
+  dom.stopEl.addEventListener("click", () => {
+    void stopAndReset();
+  });
 
   document.addEventListener("keydown", (e) => {
     const isEnter = e.code === "Enter" || e.key === "Enter";
@@ -92,8 +105,8 @@ export function initPlayback({ state, dom, ensureCtx, startPlayback, stopPlaybac
     if (isTypingTarget(e.target)) return;
 
     e.preventDefault();
-    if (state.playState === "playing") {
-      stopAndReset();
+    if (state.recordState === "recording" || state.playState === "playing") {
+      void stopAndReset();
     } else {
       state.setPlayheadTimeValue?.(state.playSessionStartTime ?? state.playheadTime);
       state.playState = "stopped";

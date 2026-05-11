@@ -5,6 +5,9 @@ export const dom = {
   layersEl: document.getElementById("layers"),
   playEl: document.getElementById("play"),
   stopEl: document.getElementById("stop"),
+  recordEl: document.getElementById("record"),
+  recordStatusEl: document.getElementById("recordStatus"),
+  recordStatusTextEl: document.getElementById("recordStatusText"),
   renderEl: document.getElementById("render"),
   clearEl: document.getElementById("clear"),
 

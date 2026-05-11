@@ -7,7 +7,7 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export function audioBufferToWav(buffer) {
+export function audioBufferToWavArrayBuffer(buffer) {
   const numCh = buffer.numberOfChannels;
   const sr = buffer.sampleRate;
   const numFrames = buffer.length;
@@ -63,5 +63,9 @@ export function audioBufferToWav(buffer) {
     }
   }
 
-  return new Blob([ab], { type: "audio/wav" });
+  return ab;
+}
+
+export function audioBufferToWav(buffer) {
+  return new Blob([audioBufferToWavArrayBuffer(buffer)], { type: "audio/wav" });
 }
